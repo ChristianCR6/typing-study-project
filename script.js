@@ -3,7 +3,8 @@ const typingInput = document.getElementById("typingInput");
 const timerDisplay = document.getElementById("timer");
 const taskText = document.getElementById("taskText");
 
-const TEST_DURATION = 5 * 60; // 5 minutes in seconds
+//const TEST_DURATION = 5 * 60; // 5 minutes in seconds
+const TEST_DURATION = 30
 
 let timeRemaining = TEST_DURATION;
 let timerInterval = null;
