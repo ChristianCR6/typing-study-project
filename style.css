@@ -20,6 +20,21 @@ h1 {
     background: #f9f9f9;
     padding: 15px;
     margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.timer-box {
+    background: #eef4ff;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+#timer {
+    font-size: 32px;
+    font-weight: bold;
+    margin: 10px 0 0 0;
 }
 
 textarea {
