@@ -1,3 +1,4 @@
+// Constant variables
 const startButton = document.getElementById("startButton");
 const typingInput = document.getElementById("typingInput");
 const timerDisplay = document.getElementById("timer");
@@ -7,21 +8,22 @@ const taskText = document.getElementById("taskText");
 //const TEST_DURATION = 5 * 60; // 5 minutes in seconds
 const TEST_DURATION = 30
 
+// Test timer variables
 let timeRemaining = TEST_DURATION;
 let timerInterval = null;
 
 // logging variables
-
 let keystrokeLog = [];
 let sessionStartTime = null;
 let currentSessionId = null;
 
-
+// Timer update function
 function updateTimerDisplay() {
     const minutes = Math.floor(timeRemaining / 60);
     const seconds = timeRemaining % 60;
 
     timerDisplay.textContent =
+        // format as xx:xx e.g. "03:29"
         `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
@@ -29,6 +31,7 @@ function generateSessionId() {
     return `session-${Date.now()}`;
 }
 
+// takes session data object and makes it into a downloadable JSON file
 function downloadJSON(data, filename) {
     const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], { type: "application/json" });
