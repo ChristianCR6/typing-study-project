@@ -3,10 +3,24 @@ const startButton = document.getElementById("startButton");
 const typingInput = document.getElementById("typingInput");
 const timerDisplay = document.getElementById("timer");
 const taskText = document.getElementById("taskText");
+const taskTypeSelect = document.getElementById("taskType");
 
 // Use 30 for testing, then revert to 5 minutes for real study
 //const TEST_DURATION = 5 * 60; // 5 minutes in seconds
 const TEST_DURATION = 30
+
+// Task data
+const copyTasks = [
+    "The quick brown fox jumps over the lazy dog.",
+    "Typing accuracy is important when collecting experimental data.",
+    "Students often improve software by building and testing small features."
+];
+
+const promptTasks = [
+    "Describe your typical morning routine.",
+    "Explain a hobby or activity that you enjoy.",
+    "Write about a challenge you have faced during university."
+];
 
 // Test timer variables
 let timeRemaining = TEST_DURATION;
@@ -16,6 +30,8 @@ let timerInterval = null;
 let keystrokeLog = [];
 let sessionStartTime = null;
 let currentSessionId = null;
+let currentTaskType = null;
+let currentTaskContent = null;
 
 // Timer update function
 function updateTimerDisplay() {
@@ -47,17 +63,35 @@ function downloadJSON(data, filename) {
     URL.revokeObjectURL(url);
 }
 
+// Random task selection function - random prompt or copy.
+function getRandomTask(taskType) {
+    if (taskType === "copy") {
+        return copyTasks[Math.floor(Math.random() * copyTasks.length)];
+    } else {
+        return promptTasks[Math.floor(Math.random() * promptTasks.length)];
+    }
+}
+
+// Load task function
+function loadTask() {
+    currentTaskType = taskTypeSelect.value;
+    currentTaskContent = getRandomTask(currentTaskType);
+    taskText.textContent = currentTaskContent;
+}
+
 function endTest() {
     clearInterval(timerInterval);
     timerInterval = null;
 
     typingInput.disabled = true;
+    taskTypeSelect.disabled = false;
     startButton.disabled = false;
     startButton.textContent = "Restart Test";
 
     // session data object for keystroke logging
     const sessionData = {
         sessionId: currentSessionId,
+        taskType: currentTaskType,
         taskText: taskText.textContent.trim(),
         startTime: new Date(sessionStartTime).toISOString(),
         endTime: new Date().toISOString(),
@@ -76,6 +110,9 @@ function endTest() {
 }
 
 startButton.addEventListener("click", function () {
+    // Load the selected task
+    loadTask();
+
     // Reset timer
     timeRemaining = TEST_DURATION;
     updateTimerDisplay();
@@ -90,6 +127,7 @@ startButton.addEventListener("click", function () {
     sessionStartTime = Date.now();
     currentSessionId = generateSessionId();
 
+    taskTypeSelect.disable = true;
     startButton.disabled = true;
     startButton.textContent = "Test Running...";
 
@@ -101,6 +139,17 @@ startButton.addEventListener("click", function () {
             endTest();
         }
     }, 1000);
+});
+
+// Optional: preview a task when selection changes
+taskTypeSelect.addEventListener("change", function () {
+    const selectedType = taskTypeSelect.value;
+
+    if (selectedType === "copy") {
+        taskText.textContent = "Press Start Test to load a copy typing passage.";
+    } else {
+        taskText.textContent = "Press Start Test to load a writing prompt.";
+    }
 });
 
 // log every key input with a timestamp
