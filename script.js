@@ -136,9 +136,23 @@ function endTest() {
     const endTime = Date.now();
     const elapsedTimeMs = endTime - sessionStartTime;
     const elapsedTimeSeconds = Number((elapsedTimeMs / 1000).toFixed(2));
-
     const finalText = typingInput.value;
     const grossWPM = calculateGrossWPM(finalText, elapsedTimeMs);
+
+    // Ensures if test ends with a pause over 2seconds the pause is counted.
+    if (lastKeystrokeTime !== null) {
+        const finalPauseMs = endTime - lastKeystrokeTime;
+
+        if (finalPauseMs >= PAUSE_THRESHOLD_MS) {
+            pauseEvents.push({
+                startAfterElapsedMs: lastKeystrokeTime - sessionStartTime,
+                endAtElapsedMs: endTime - sessionStartTime,
+                durationMs: finalPauseMs,
+                endedBy: "testEnd"
+            });
+        }
+    }
+
     const pauseStats = calculatePauseStats(pauseEvents);
 
     const sessionData = {
