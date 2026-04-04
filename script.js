@@ -4,10 +4,11 @@ const typingInput = document.getElementById("typingInput");
 const timerDisplay = document.getElementById("timer");
 const taskText = document.getElementById("taskText");
 const taskTypeSelect = document.getElementById("taskType");
+const participantIdInput = document.getElementById("participantId");
 
 // Use 30 for testing, then revert to 5 minutes for real study
-//const TEST_DURATION = 5 * 60; // 5 minutes in seconds
-const TEST_DURATION = 30
+// const TEST_DURATION = 5 * 60; // 5 minutes in seconds
+const TEST_DURATION = 30;
 
 // Task data
 const copyTasks = [
@@ -26,12 +27,13 @@ const promptTasks = [
 let timeRemaining = TEST_DURATION;
 let timerInterval = null;
 
-// logging variables
+// Logging/session variables
 let keystrokeLog = [];
 let sessionStartTime = null;
 let currentSessionId = null;
 let currentTaskType = null;
 let currentTaskContent = null;
+let currentParticipantId = null;
 
 // Timer update function
 function updateTimerDisplay() {
@@ -39,7 +41,6 @@ function updateTimerDisplay() {
     const seconds = timeRemaining % 60;
 
     timerDisplay.textContent =
-        // format as xx:xx e.g. "03:29"
         `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
@@ -47,7 +48,7 @@ function generateSessionId() {
     return `session-${Date.now()}`;
 }
 
-// takes session data object and makes it into a downloadable JSON file
+// Takes session data object and makes it into a downloadable JSON file
 function downloadJSON(data, filename) {
     const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], { type: "application/json" });
@@ -63,7 +64,7 @@ function downloadJSON(data, filename) {
     URL.revokeObjectURL(url);
 }
 
-// Random task selection function - random prompt or copy.
+// Random task selection function
 function getRandomTask(taskType) {
     if (taskType === "copy") {
         return copyTasks[Math.floor(Math.random() * copyTasks.length)];
@@ -85,14 +86,15 @@ function endTest() {
 
     typingInput.disabled = true;
     taskTypeSelect.disabled = false;
+    participantIdInput.disabled = false;
     startButton.disabled = false;
     startButton.textContent = "Restart Test";
 
-    // session data object for keystroke logging
     const sessionData = {
         sessionId: currentSessionId,
+        participantId: currentParticipantId,
         taskType: currentTaskType,
-        taskText: taskText.textContent.trim(),
+        taskText: currentTaskContent,
         startTime: new Date(sessionStartTime).toISOString(),
         endTime: new Date().toISOString(),
         durationSeconds: TEST_DURATION,
@@ -103,13 +105,25 @@ function endTest() {
 
     console.log("Session data:", sessionData);
 
-    // Download the session data automatically
-    downloadJSON(sessionData, `${currentSessionId}.json`);
+    // Session has filename: paricipant id + session id
+    downloadJSON(sessionData, `${currentParticipantId}_${currentSessionId}.json`);
 
     alert("Time is up! The typing test has ended.");
 }
 
+// Validation - prevents empty participant IDs
 startButton.addEventListener("click", function () {
+    const enteredParticipantId = participantIdInput.value.trim();
+
+    if (!enteredParticipantId) {
+        alert("Please enter a participant ID before starting the test.");
+        participantIdInput.focus();
+        return;
+    }
+
+    // keep participant ID attached to session
+    currentParticipantId = enteredParticipantId;
+
     // Load the selected task
     loadTask();
 
@@ -127,7 +141,9 @@ startButton.addEventListener("click", function () {
     sessionStartTime = Date.now();
     currentSessionId = generateSessionId();
 
-    taskTypeSelect.disable = true;
+    // Prevents user from interacting with these elements during test
+    taskTypeSelect.disabled = true;
+    participantIdInput.disabled = true;
     startButton.disabled = true;
     startButton.textContent = "Test Running...";
 
@@ -152,13 +168,12 @@ taskTypeSelect.addEventListener("change", function () {
     }
 });
 
-// log every key input with a timestamp
+// Log every key input with a timestamp
 typingInput.addEventListener("keydown", function (event) {
     if (typingInput.disabled || !sessionStartTime) return;
 
     const keyTime = Date.now();
 
-    // Use setTimeout so the textarea value is captured AFTER the key press changes it
     setTimeout(() => {
         keystrokeLog.push({
             key: event.key,
