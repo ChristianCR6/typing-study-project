@@ -34,7 +34,8 @@ let currentSessionId = null;
 let currentTaskType = null;
 let currentTaskContent = null;
 let currentParticipantId = null;
-let backspaceCount = 0;
+let rawBackspaceCount = 0;
+let effectiveBackspaceCount = 0;
 
 // Timer update function
 function updateTimerDisplay() {
@@ -121,7 +122,8 @@ function endTest() {
         finalText: finalText,
         totalCharactersTyped: finalText.length,
         grossWPM: grossWPM,
-        backspaceCount: backspaceCount,
+        rawBackspaceCount: rawBackspaceCount,
+        effectiveBackspaceCount: effectiveBackspaceCount,
         totalKeystrokes: keystrokeLog.length,
         keystrokes: keystrokeLog
     };
@@ -160,7 +162,8 @@ startButton.addEventListener("click", function () {
 
     // Reset logging/session info
     keystrokeLog = [];
-    backspaceCount = 0;
+    rawBackspaceCount = 0;
+    effectiveBackspaceCount = 0;
     sessionStartTime = Date.now();
     currentSessionId = generateSessionId();
 
@@ -196,18 +199,34 @@ typingInput.addEventListener("keydown", function (event) {
     if (typingInput.disabled || !sessionStartTime) return;
 
     const keyTime = Date.now();
+    const textBeforeKey = typingInput.value;
+    const selectionStartBefore = typingInput.selectionStart;
+    const selectionEndBefore = typingInput.selectionEnd;
 
     if (event.key === "Backspace") {
-        backspaceCount++;
+        rawBackspaceCount++;
     }
 
     setTimeout(() => {
+        const textAfterKey = typingInput.value;
+
+        if (event.key === "Backspace") {
+            const hadSelection = selectionStartBefore !== selectionEndBefore;
+            const textGotShorter = textAfterKey.length < textBeforeKey.length;
+            const hadCharacterBeforeCursor =
+                selectionStartBefore > 0 && selectionStartBefore === selectionEndBefore;
+
+            if ((hadSelection && textGotShorter) || (hadCharacterBeforeCursor && textGotShorter)) {
+                effectiveBackspaceCount++;
+            }
+        }
+
         keystrokeLog.push({
             key: event.key,
             code: event.code,
             timestamp: new Date(keyTime).toISOString(),
             elapsedTimeMs: keyTime - sessionStartTime,
-            textAfterKey: typingInput.value,
+            textAfterKey: textAfterKey,
             cursorPosition: typingInput.selectionStart
         });
     }, 0);
