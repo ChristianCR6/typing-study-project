@@ -123,6 +123,42 @@ function calculatePauseStats(pauseEvents) {
     };
 }
 
+function calculateCopyTaskAccuracy(finalText, targetText) {
+    const typedLength = finalText.length;
+    const targetLength = targetText.length;
+    const minLength = Math.min(typedLength, targetLength);
+
+    let correctCharacters = 0;
+    let incorrectCharacters = 0;
+
+    for (let i = 0; i < minLength; i++) {
+        if (finalText[i] === targetText[i]) {
+            correctCharacters++;
+        } else {
+            incorrectCharacters++;
+        }
+    }
+
+    const extraCharacters = Math.max(0, typedLength - targetLength);
+    const omittedCharacters = Math.max(0, targetLength - typedLength);
+
+    // Extra typed characters should count as incorrect attempts
+    incorrectCharacters += extraCharacters;
+
+    const accuracyPercent =
+        typedLength > 0
+            ? Number(((correctCharacters / typedLength) * 100).toFixed(2))
+            : 0;
+
+    return {
+        correctCharacters: correctCharacters,
+        incorrectCharacters: incorrectCharacters,
+        extraCharacters: extraCharacters,
+        omittedCharacters: omittedCharacters,
+        accuracyPercent: accuracyPercent
+    };
+}
+
 function endTest() {
     clearInterval(timerInterval);
     timerInterval = null;
@@ -155,6 +191,12 @@ function endTest() {
 
     const pauseStats = calculatePauseStats(pauseEvents);
 
+    let copyTaskMetrics = null;
+
+        if (currentTaskType === "copy") {
+            copyTaskMetrics = calculateCopyTaskAccuracy(finalText, currentTaskContent);
+    }
+
     const sessionData = {
         sessionId: currentSessionId,
         participantId: currentParticipantId,
@@ -173,6 +215,7 @@ function endTest() {
         longestPauseMs: pauseStats.longestPauseMs,
         pauseThresholdMs: PAUSE_THRESHOLD_MS,
         pauseEvents: pauseEvents,
+        copyTaskMetrics: copyTaskMetrics,
         totalKeystrokes: keystrokeLog.length,
         keystrokes: keystrokeLog
     };
@@ -181,7 +224,13 @@ function endTest() {
 
     downloadJSON(sessionData, `${currentParticipantId}_${currentSessionId}.json`);
 
-    alert(`Time is up! The typing test has ended.\nGross WPM: ${grossWPM}`);
+    let endMessage = `Time is up! The typing test has ended.\nGross WPM: ${grossWPM}`;
+
+    if (copyTaskMetrics) {
+        endMessage += `\nCopy Accuracy: ${copyTaskMetrics.accuracyPercent}%`;
+    }
+
+    alert(endMessage);
 }
 
 // Validation - prevents empty participant IDs
