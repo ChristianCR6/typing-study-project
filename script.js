@@ -80,6 +80,18 @@ function loadTask() {
     taskText.textContent = currentTaskContent;
 }
 
+// Calculates Gross WPM using the formula: (number of typed characters / 5) / time in minutes
+function calculateGrossWPM(finalText, elapsedTimeMs) {
+    const minutes = elapsedTimeMs / 60000;
+
+    if (minutes <= 0) return 0;
+
+    const totalCharacters = finalText.length;
+    const grossWPM = (totalCharacters / 5) / minutes;
+
+    return Number(grossWPM.toFixed(2));
+}
+
 function endTest() {
     clearInterval(timerInterval);
     timerInterval = null;
@@ -90,25 +102,33 @@ function endTest() {
     startButton.disabled = false;
     startButton.textContent = "Restart Test";
 
+    const endTime = Date.now();
+    const elapsedTimeMs = endTime - sessionStartTime;
+    const elapsedTimeSeconds = Number((elapsedTimeMs / 1000).toFixed(2));
+
+    const finalText = typingInput.value;
+    const grossWPM = calculateGrossWPM(finalText, elapsedTimeMs);
+
     const sessionData = {
         sessionId: currentSessionId,
         participantId: currentParticipantId,
         taskType: currentTaskType,
         taskText: currentTaskContent,
         startTime: new Date(sessionStartTime).toISOString(),
-        endTime: new Date().toISOString(),
-        durationSeconds: TEST_DURATION,
-        finalText: typingInput.value,
+        endTime: new Date(endTime).toISOString(),
+        durationSeconds: elapsedTimeSeconds,
+        finalText: finalText,
+        totalCharactersTyped: finalText.length,
+        grossWPM: grossWPM,
         totalKeystrokes: keystrokeLog.length,
         keystrokes: keystrokeLog
     };
 
     console.log("Session data:", sessionData);
 
-    // Session has filename: paricipant id + session id
     downloadJSON(sessionData, `${currentParticipantId}_${currentSessionId}.json`);
 
-    alert("Time is up! The typing test has ended.");
+    alert(`Time is up! The typing test has ended.\nGross WPM: ${grossWPM}`);
 }
 
 // Validation - prevents empty participant IDs
