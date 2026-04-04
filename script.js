@@ -9,6 +9,7 @@ const participantIdInput = document.getElementById("participantId");
 // Use 30 for testing, then revert to 5 minutes for real study
 // const TEST_DURATION = 5 * 60; // 5 minutes in seconds
 const TEST_DURATION = 30;
+const PAUSE_THRESHOLD_MS = 2000;
 
 // Task data
 const copyTasks = [
@@ -36,6 +37,8 @@ let currentTaskContent = null;
 let currentParticipantId = null;
 let rawBackspaceCount = 0;
 let effectiveBackspaceCount = 0;
+let lastKeystrokeTime = null;
+let pauseEvents = [];
 
 // Timer update function
 function updateTimerDisplay() {
@@ -82,6 +85,12 @@ function loadTask() {
     taskText.textContent = currentTaskContent;
 }
 
+
+// -----------------------------------
+// Helper Metric calculating functions
+// -----------------------------------
+
+
 // Calculates Gross WPM using the formula: (number of typed characters / 5) / time in minutes
 function calculateGrossWPM(finalText, elapsedTimeMs) {
     const minutes = elapsedTimeMs / 60000;
@@ -92,6 +101,26 @@ function calculateGrossWPM(finalText, elapsedTimeMs) {
     const grossWPM = (totalCharacters / 5) / minutes;
 
     return Number(grossWPM.toFixed(2));
+}
+
+function calculatePauseStats(pauseEvents) {
+    if (pauseEvents.length === 0) {
+        return {
+            pauseCount: 0,
+            averagePauseMs: 0,
+            longestPauseMs: 0
+        };
+    }
+
+    const totalPauseTime = pauseEvents.reduce((sum, pause) => sum + pause.durationMs, 0);
+    const averagePauseMs = totalPauseTime / pauseEvents.length;
+    const longestPauseMs = Math.max(...pauseEvents.map(pause => pause.durationMs));
+
+    return {
+        pauseCount: pauseEvents.length,
+        averagePauseMs: Number(averagePauseMs.toFixed(2)),
+        longestPauseMs: longestPauseMs
+    };
 }
 
 function endTest() {
@@ -110,6 +139,7 @@ function endTest() {
 
     const finalText = typingInput.value;
     const grossWPM = calculateGrossWPM(finalText, elapsedTimeMs);
+    const pauseStats = calculatePauseStats(pauseEvents);
 
     const sessionData = {
         sessionId: currentSessionId,
@@ -124,6 +154,11 @@ function endTest() {
         grossWPM: grossWPM,
         rawBackspaceCount: rawBackspaceCount,
         effectiveBackspaceCount: effectiveBackspaceCount,
+        pauseCount: pauseStats.pauseCount,
+        averagePauseMs: pauseStats.averagePauseMs,
+        longestPauseMs: pauseStats.longestPauseMs,
+        pauseThresholdMs: PAUSE_THRESHOLD_MS,
+        pauseEvents: pauseEvents,
         totalKeystrokes: keystrokeLog.length,
         keystrokes: keystrokeLog
     };
@@ -164,6 +199,8 @@ startButton.addEventListener("click", function () {
     keystrokeLog = [];
     rawBackspaceCount = 0;
     effectiveBackspaceCount = 0;
+    lastKeystrokeTime = null;
+    pauseEvents = [];
     sessionStartTime = Date.now();
     currentSessionId = generateSessionId();
 
@@ -202,6 +239,20 @@ typingInput.addEventListener("keydown", function (event) {
     const textBeforeKey = typingInput.value;
     const selectionStartBefore = typingInput.selectionStart;
     const selectionEndBefore = typingInput.selectionEnd;
+
+    if (lastKeystrokeTime !== null) {
+        const gapMs = keyTime - lastKeystrokeTime;
+
+        if (gapMs >= PAUSE_THRESHOLD_MS) {
+            pauseEvents.push({
+                startAfterElapsedMs: lastKeystrokeTime - sessionStartTime,
+                endAtElapsedMs: keyTime - sessionStartTime,
+                durationMs: gapMs
+            });
+        }
+    }
+
+    lastKeystrokeTime = keyTime;
 
     if (event.key === "Backspace") {
         rawBackspaceCount++;
