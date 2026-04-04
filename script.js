@@ -34,6 +34,7 @@ let currentSessionId = null;
 let currentTaskType = null;
 let currentTaskContent = null;
 let currentParticipantId = null;
+let backspaceCount = 0;
 
 // Timer update function
 function updateTimerDisplay() {
@@ -120,6 +121,7 @@ function endTest() {
         finalText: finalText,
         totalCharactersTyped: finalText.length,
         grossWPM: grossWPM,
+        backspaceCount: backspaceCount,
         totalKeystrokes: keystrokeLog.length,
         keystrokes: keystrokeLog
     };
@@ -158,6 +160,7 @@ startButton.addEventListener("click", function () {
 
     // Reset logging/session info
     keystrokeLog = [];
+    backspaceCount = 0;
     sessionStartTime = Date.now();
     currentSessionId = generateSessionId();
 
@@ -193,6 +196,10 @@ typingInput.addEventListener("keydown", function (event) {
     if (typingInput.disabled || !sessionStartTime) return;
 
     const keyTime = Date.now();
+
+    if (event.key === "Backspace") {
+        backspaceCount++;
+    }
 
     setTimeout(() => {
         keystrokeLog.push({
