@@ -39,6 +39,7 @@ let rawBackspaceCount = 0;
 let effectiveBackspaceCount = 0;
 let lastKeystrokeTime = null;
 let pauseEvents = [];
+let pendingTextChangeLog = null;
 
 // Timer update function
 function updateTimerDisplay() {
@@ -280,6 +281,7 @@ startButton.addEventListener("click", function () {
     effectiveBackspaceCount = 0;
     lastKeystrokeTime = null;
     pauseEvents = [];
+    pendingTextChangeLog = null;
     sessionStartTime = Date.now();
     currentSessionId = generateSessionId();
 
@@ -337,29 +339,78 @@ typingInput.addEventListener("keydown", function (event) {
         rawBackspaceCount++;
     }
 
-    setTimeout(() => {
-        const textAfterKey = typingInput.value;
+    const keyChangesText =
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        (
+            event.key.length === 1 ||
+            event.key === "Backspace" ||
+            event.key === "Delete" ||
+            event.key === "Enter"
+        );
 
-        if (event.key === "Backspace") {
-            const hadSelection = selectionStartBefore !== selectionEndBefore;
-            const textGotShorter = textAfterKey.length < textBeforeKey.length;
-            const hadCharacterBeforeCursor =
-                selectionStartBefore > 0 && selectionStartBefore === selectionEndBefore;
-
-            if ((hadSelection && textGotShorter) || (hadCharacterBeforeCursor && textGotShorter)) {
-                effectiveBackspaceCount++;
-            }
-        }
-
+    // Log non-text-changing keys immediately
+    if (!keyChangesText) {
         keystrokeLog.push({
             key: event.key,
             code: event.code,
             timestamp: new Date(keyTime).toISOString(),
             elapsedTimeMs: keyTime - sessionStartTime,
-            textAfterKey: textAfterKey,
-            cursorPosition: typingInput.selectionStart
+            textAfterKey: typingInput.value,
+            cursorPosition: typingInput.selectionStart,
+            textChanged: false
         });
-    }, 0);
+        return;
+    }
+
+    // Save keydown info and finish the log entry on the input event
+    pendingTextChangeLog = {
+        key: event.key,
+        code: event.code,
+        keyTime: keyTime,
+        textBeforeKey: textBeforeKey,
+        selectionStartBefore: selectionStartBefore,
+        selectionEndBefore: selectionEndBefore
+    };
+});
+
+typingInput.addEventListener("input", function () {
+    if (typingInput.disabled || !sessionStartTime || !pendingTextChangeLog) return;
+
+    const textAfterKey = typingInput.value;
+
+    const {
+        key,
+        code,
+        keyTime,
+        textBeforeKey,
+        selectionStartBefore,
+        selectionEndBefore
+    } = pendingTextChangeLog;
+
+    if (key === "Backspace") {
+        const hadSelection = selectionStartBefore !== selectionEndBefore;
+        const textGotShorter = textAfterKey.length < textBeforeKey.length;
+        const hadCharacterBeforeCursor =
+            selectionStartBefore > 0 && selectionStartBefore === selectionEndBefore;
+
+        if ((hadSelection && textGotShorter) || (hadCharacterBeforeCursor && textGotShorter)) {
+            effectiveBackspaceCount++;
+        }
+    }
+
+    keystrokeLog.push({
+        key: key,
+        code: code,
+        timestamp: new Date(keyTime).toISOString(),
+        elapsedTimeMs: keyTime - sessionStartTime,
+        textAfterKey: textAfterKey,
+        cursorPosition: typingInput.selectionStart,
+        textChanged: true
+    });
+
+    pendingTextChangeLog = null;
 });
 
 // Set initial timer display when page loads
