@@ -250,6 +250,13 @@ function endTest() {
     alert(endMessage);
 }
 
+function blockRestrictedInput(event, actionName) {
+    if (typingInput.disabled || !sessionStartTime) return;
+
+    event.preventDefault();
+    alert(`${actionName} is disabled during the typing test.`);
+}
+
 // Validation - prevents empty participant IDs
 startButton.addEventListener("click", function () {
     const enteredParticipantId = participantIdInput.value.trim();
@@ -411,6 +418,18 @@ typingInput.addEventListener("input", function () {
     });
 
     pendingTextChangeLog = null;
+});
+
+typingInput.addEventListener("paste", function (event) {
+    blockRestrictedInput(event, "Pasting");
+});
+
+typingInput.addEventListener("cut", function (event) {
+    blockRestrictedInput(event, "Cutting");
+});
+
+typingInput.addEventListener("drop", function (event) {
+    blockRestrictedInput(event, "Drag-and-drop");
 });
 
 // Set initial timer display when page loads
