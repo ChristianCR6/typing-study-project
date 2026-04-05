@@ -198,26 +198,42 @@ function endTest() {
     }
 
     const sessionData = {
-        sessionId: currentSessionId,
-        participantId: currentParticipantId,
-        taskType: currentTaskType,
-        taskText: currentTaskContent,
-        startTime: new Date(sessionStartTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        durationSeconds: elapsedTimeSeconds,
-        finalText: finalText,
-        totalCharactersTyped: finalText.length,
-        grossWPM: grossWPM,
-        rawBackspaceCount: rawBackspaceCount,
-        effectiveBackspaceCount: effectiveBackspaceCount,
-        pauseCount: pauseStats.pauseCount,
-        averagePauseMs: pauseStats.averagePauseMs,
-        longestPauseMs: pauseStats.longestPauseMs,
-        pauseThresholdMs: PAUSE_THRESHOLD_MS,
-        pauseEvents: pauseEvents,
-        copyTaskMetrics: copyTaskMetrics,
-        totalKeystrokes: keystrokeLog.length,
-        keystrokes: keystrokeLog
+        metadata: {
+            exportVersion: 1,
+            sessionId: currentSessionId,
+            participantId: currentParticipantId,
+            startTime: new Date(sessionStartTime).toISOString(),
+            endTime: new Date(endTime).toISOString(),
+            durationSeconds: elapsedTimeSeconds
+        },
+
+        task: {
+            taskType: currentTaskType,
+            promptOrSourceText: currentTaskContent,
+            finalText: finalText
+        },
+
+        config: {
+            testDurationSeconds: TEST_DURATION,
+            pauseThresholdMs: PAUSE_THRESHOLD_MS
+        },
+
+        metrics: {
+            totalCharactersTyped: finalText.length,
+            grossWPM: grossWPM,
+            rawBackspaceCount: rawBackspaceCount,
+            effectiveBackspaceCount: effectiveBackspaceCount,
+            pauseCount: pauseStats.pauseCount,
+            averagePauseMs: pauseStats.averagePauseMs,
+            longestPauseMs: pauseStats.longestPauseMs,
+            copyTaskMetrics: copyTaskMetrics
+        },
+
+        logs: {
+            totalKeystrokes: keystrokeLog.length,
+            pauseEvents: pauseEvents,
+            keystrokes: keystrokeLog
+        }
     };
 
     console.log("Session data:", sessionData);
