@@ -1,45 +1,69 @@
+/* ============================================================
+   Typing Study — stylesheet
+   The aesthetic is intentionally clean and minimal: the app is a
+   research instrument, not a marketing site, so visual noise
+   is kept low to avoid biasing typing behaviour.
+   ============================================================ */
+
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
     margin: 0;
+    color: #222;
+    line-height: 1.5;
 }
 
 .container {
-    width: 600px;
-    margin: 60px auto;
+    width: 720px;
+    max-width: 95%;
+    margin: 40px auto;
     background: white;
-    padding: 30px;
+    padding: 30px 40px;
     border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 h1 {
     text-align: center;
+    margin-top: 0;
 }
 
+h2 {
+    margin-top: 0;
+}
+
+h3 {
+    margin-bottom: 4px;
+}
+
+/* ----- Screen visibility ------------------------------------------------
+   Every <section class="screen"> is hidden by default; only the one with
+   the .active class is shown. JS toggles which is active. */
+.screen {
+    display: none;
+}
+.screen.active {
+    display: block;
+}
+
+/* ----- Typing task display ---------------------------------------------- */
 .task {
     background: #f9f9f9;
     padding: 15px;
     margin-bottom: 20px;
     border-radius: 8px;
+    /* Copy passages are long; cap height and allow scroll within the box
+       rather than pushing the textarea off-screen. */
+    max-height: 240px;
+    overflow-y: auto;
 }
 
-.task-selection {
-    margin-bottom: 20px;
+#taskText {
+    margin: 8px 0 0 0;
+    white-space: pre-wrap;
 }
 
-.task-selection label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 8px;
-}
-
-.task-selection select {
-    width: 100%;
-    padding: 10px;
-    font-size: 16px;
-    box-sizing: border-box;
-}
-
+/* ----- Timer ------------------------------------------------------------ */
 .timer-box {
     background: #eef4ff;
     padding: 15px;
@@ -54,18 +78,101 @@ h1 {
     margin: 10px 0 0 0;
 }
 
+.timer-hint {
+    font-size: 13px;
+    color: #555;
+    margin: 6px 0 0 0;
+    font-style: italic;
+}
+
+/* ----- Typing input ---------------------------------------------------- */
 textarea {
     width: 100%;
-    height: 150px;
+    height: 200px;
     font-size: 16px;
     padding: 10px;
     box-sizing: border-box;
+    font-family: inherit;
+    line-height: 1.4;
+    resize: vertical;
 }
 
+/* ----- Buttons --------------------------------------------------------- */
 button {
     display: block;
     margin-top: 20px;
     padding: 10px 20px;
     font-size: 16px;
     cursor: pointer;
+    background: #2c5fb8;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+    background: #234a91;
+}
+
+button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+}
+
+/* ----- Forms (setup screen) ------------------------------------------- */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.form-group input[type="text"],
+.form-group select {
+    width: 100%;
+    padding: 9px;
+    font-size: 15px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+}
+
+.form-group input[type="text"]:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #2c5fb8;
+}
+
+/* ----- Consent ---------------------------------------------------------- */
+.consent-line {
+    display: block;
+    margin-top: 20px;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.consent-line input {
+    margin-right: 8px;
+    transform: scale(1.2);
+    vertical-align: middle;
+}
+
+ul {
+    line-height: 1.7;
+}
+
+/* ----- Download confirmation feedback --------------------------------- */
+.download-status {
+    margin-top: 15px;
+    color: #2c5fb8;
+    font-weight: bold;
+    min-height: 1.4em;
 }

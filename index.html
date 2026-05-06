@@ -2,57 +2,219 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Typing Study</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <div class="container">
 
     <h1>Typing Study</h1>
 
-    <div class="participant-box">
-        <label for="participantId">Participant ID:</label>
-        <input
-            type="text"
-            id="participantId"
-            placeholder="Enter participant ID (e.g. P01)">
-    </div>
+    <!-- ============================================================
+         SCREEN: WELCOME
+         First thing the participant sees. Sets expectations about
+         length and structure of the session.
+         ============================================================ -->
+    <section id="screen-welcome" class="screen active">
+        <h2>Welcome</h2>
+        <p>Thank you for taking part in this study on typing performance.
+            The session will take approximately 12&ndash;15 minutes from start to finish:</p>
+        <ul>
+            <li>A short information page (this screen and the next)</li>
+            <li>A few quick questions about your background</li>
+            <li>A 1-minute practice run to get used to the interface</li>
+            <li>Two 5-minute typing tasks, with a short break between them</li>
+        </ul>
+        <p>Please complete the session in a quiet environment without distractions,
+            using a physical keyboard. When you are ready, click below.</p>
+        <button id="welcomeContinue">Continue</button>
+    </section>
 
-    <div class="task-selection">
-        <label for="taskType">Choose Task Type:</label>
-        <select id="taskType">
-            <option value="copy">Copy Task</option>
-            <option value="prompt">Prompt Task</option>
-        </select>
-    </div>
+    <!-- ============================================================
+         SCREEN: CONSENT
+         Information sheet + consent checkbox.
+         Continue button is disabled until the box is ticked.
+         ============================================================ -->
+    <section id="screen-consent" class="screen">
+        <h2>Information &amp; consent</h2>
 
-    <div class="task">
-        <h2>Task</h2>
-        <p id="taskText">
-            Select a task type and press Start Test.
-        </p>
-    </div>
+        <h3>What this study is about</h3>
+        <p>This research compares two types of typing task: <em>copy-based typing</em>
+            (reproducing a passage of text shown on screen) and <em>prompt-based typing</em>
+            (writing a free response to a written prompt). The aim is to understand whether
+            typing performance differs between these two conditions.</p>
 
-    <!-- Task countdown timer -->
-    <div class="timer-box">
-        <h2>Time Remaining</h2>
-        <p id="timer">05:00</p>
-    </div>
+        <h3>What you will do</h3>
+        <p>You will complete one short practice round followed by two five-minute typing tasks.
+            Each task will be one of the two types described above. The order is assigned by the system.</p>
 
-    <!-- Participant typing area -->
-    <textarea
-        id="typingInput"
-        placeholder="Start typing here..."
-        disabled
-        spellcheck="false"
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="off">
-    </textarea>
+        <h3>What data is recorded</h3>
+        <p>For each task, the application records the keys you press, the timing of each keystroke,
+            and the final text you produce. The optional background information you provide on the
+            next page is also stored. Your participant ID is the only identifier &mdash;
+            your name is not collected.</p>
 
-    <button id="startButton">Start Test</button>
+        <h3>Your rights</h3>
+        <p>Participation is voluntary. You can stop at any time by closing the page.
+            The data file is exported at the end of the session and is provided to you to forward
+            to the researcher; if you change your mind, simply do not send it. The collected data
+            will be used only for this academic project and any associated assessment.</p>
+
+        <label class="consent-line">
+            <input type="checkbox" id="consentCheckbox">
+            I have read and understood the information above and consent to take part in the study.
+        </label>
+        <button id="consentContinue" disabled>Continue</button>
+    </section>
+
+    <!-- ============================================================
+         SCREEN: SETUP
+         Participant ID (required) plus optional demographics.
+         All demographic fields default to "prefer not to say" so a
+         participant who skips them still produces valid data.
+         ============================================================ -->
+    <section id="screen-setup" class="screen">
+        <h2>Participant information</h2>
+        <p>Please enter the participant ID provided by the researcher.
+            The questions below are optional and can be left as
+            &ldquo;prefer not to say&rdquo;.</p>
+
+        <div class="form-group">
+            <label for="participantId">Participant ID:</label>
+            <input type="text" id="participantId" placeholder="e.g. P01">
+        </div>
+
+        <div class="form-group">
+            <label for="ageRange">Age range:</label>
+            <select id="ageRange">
+                <option value="prefer-not-say">Prefer not to say</option>
+                <option value="18-24">18&ndash;24</option>
+                <option value="25-34">25&ndash;34</option>
+                <option value="35-44">35&ndash;44</option>
+                <option value="45-54">45&ndash;54</option>
+                <option value="55+">55+</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="typingFrequency">How often do you type on a computer keyboard?</label>
+            <select id="typingFrequency">
+                <option value="prefer-not-say">Prefer not to say</option>
+                <option value="daily-many-hours">Daily &mdash; several hours per day</option>
+                <option value="daily-some">Daily &mdash; less than an hour</option>
+                <option value="weekly">A few times per week</option>
+                <option value="rarely">Rarely</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="englishFirstLanguage">Is English your first language?</label>
+            <select id="englishFirstLanguage">
+                <option value="prefer-not-say">Prefer not to say</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="yearsUsingComputer">Years of regular computer use:</label>
+            <select id="yearsUsingComputer">
+                <option value="prefer-not-say">Prefer not to say</option>
+                <option value="0-2">0&ndash;2 years</option>
+                <option value="3-5">3&ndash;5 years</option>
+                <option value="6-10">6&ndash;10 years</option>
+                <option value="10+">More than 10 years</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="keyboardType">Type of keyboard you are using today:</label>
+            <select id="keyboardType">
+                <option value="prefer-not-say">Prefer not to say</option>
+                <option value="laptop-builtin">Laptop built-in keyboard</option>
+                <option value="external-membrane">External keyboard (membrane / rubber-dome)</option>
+                <option value="external-mechanical">External mechanical keyboard</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <button id="setupContinue">Continue</button>
+    </section>
+
+    <!-- ============================================================
+         SCREEN: PRACTICE INTRO
+         Brief explanation before the unrecorded warm-up.
+         ============================================================ -->
+    <section id="screen-practice-intro" class="screen">
+        <h2>Practice round (1 minute)</h2>
+        <p>Before the recorded tasks you will do a brief one-minute practice round
+            to get used to the interface. This is a copy-typing warm-up and is
+            <strong>not recorded</strong>.</p>
+        <p>The timer starts as soon as you press the first key.
+            Pasting and dragging text into the box are disabled.</p>
+        <button id="practiceStart">Begin practice</button>
+    </section>
+
+    <!-- ============================================================
+         SCREEN: TASK INTRO
+         Reused for both Task 1 and Task 2. JS sets the title and
+         description based on the participant's task order.
+         ============================================================ -->
+    <section id="screen-task-intro" class="screen">
+        <h2 id="taskIntroTitle">Task</h2>
+        <p id="taskIntroDescription"></p>
+        <p>Time limit: 5 minutes. The timer starts when you press your first key.</p>
+        <button id="taskStart">Begin task</button>
+    </section>
+
+    <!-- ============================================================
+         SCREEN: TYPING
+         The active typing surface. Reused for the practice and both
+         measured tasks - JS rebinds listeners and resets state each time.
+         ============================================================ -->
+    <section id="screen-typing" class="screen">
+        <div class="task">
+            <h2 id="typingTaskHeader">Task</h2>
+            <p id="taskText"></p>
+        </div>
+
+        <div class="timer-box">
+            <h2>Time remaining</h2>
+            <p id="timer">05:00</p>
+            <p id="timerHint" class="timer-hint">Timer starts when you begin typing</p>
+        </div>
+
+        <textarea id="typingInput"
+                  placeholder="Start typing here..."
+                  spellcheck="false"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"></textarea>
+    </section>
+
+    <!-- ============================================================
+         SCREEN: INTERMISSION
+         Short break between Task 1 and Task 2.
+         ============================================================ -->
+    <section id="screen-intermission" class="screen">
+        <h2>Task 1 complete</h2>
+        <p>Take a moment to rest. When you are ready, click below to begin the second task.</p>
+        <button id="intermissionContinue">Continue to task 2</button>
+    </section>
+
+    <!-- ============================================================
+         SCREEN: COMPLETE
+         Download data and end of session.
+         ============================================================ -->
+    <section id="screen-complete" class="screen">
+        <h2>Thank you!</h2>
+        <p>The study is now complete. Please click the button below to download your data file,
+            then send it to the researcher as instructed.</p>
+        <button id="downloadButton">Download data</button>
+        <p id="downloadStatus" class="download-status"></p>
+    </section>
 
 </div>
 
