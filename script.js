@@ -661,6 +661,22 @@ document.addEventListener('DOMContentLoaded', () => {
         showScreen('screen-consent');
     });
 
+    // Back navigation on the pre-experiment screens. Allowed up to and
+    // including the setup screen so a participant can re-read the
+    // information / consent text or correct a typo in their demographics.
+    // No back navigation after setup is committed: clicking Continue on
+    // the setup screen captures the participant ID, environment metadata,
+    // and session start time, so going back from there would either
+    // silently invalidate that data or leave the application in an
+    // inconsistent state.
+    document.getElementById('consentBack').addEventListener('click', () => {
+        showScreen('screen-welcome');
+    });
+
+    document.getElementById('setupBack').addEventListener('click', () => {
+        showScreen('screen-consent');
+    });
+
     // Consent: checkbox toggles continue button; continue moves on
     const consentCheckbox = document.getElementById('consentCheckbox');
     const consentContinue = document.getElementById('consentContinue');

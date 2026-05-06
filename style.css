@@ -120,6 +120,31 @@ button:disabled {
     cursor: not-allowed;
 }
 
+/* ----- Button row (for screens with both Back and Continue) ----------
+   Lays the two buttons side-by-side with the secondary (Back) button
+   on the left. Override individual button margin-top because the row
+   itself controls spacing. */
+.button-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.button-row button {
+    margin-top: 0;
+}
+
+/* Secondary button styling: visually less prominent than the primary
+   Continue button, so it does not compete for attention. */
+.button-secondary {
+    background: #e0e6ee;
+    color: #2c5fb8;
+}
+
+.button-secondary:hover:not(:disabled) {
+    background: #ccd5e2;
+}
+
 /* ----- Forms (setup screen) ------------------------------------------- */
 .form-group {
     margin-bottom: 15px;
