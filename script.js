@@ -695,14 +695,56 @@ document.addEventListener('DOMContentLoaded', () => {
         showScreen('screen-setup');
     });
 
-    // Setup -> practice intro
+// Setup -> practice intro
+    //
+    // Participant ID must match the pattern P<digits> (e.g. P01, P15, P100).
+    // The trailing digits are required because determineTaskOrder() uses
+    // their parity to assign counterbalanced task order. An ID with no
+    // digits would silently default to the "even" condition - we reject
+    // it explicitly to make this requirement visible to the experimenter.
+    const PARTICIPANT_ID_PATTERN = /^P\d+$/;
+
+    function showIdError(message) {
+        const input = document.getElementById('participantId');
+        const errorEl = document.getElementById('participantIdError');
+        errorEl.textContent = message;
+        input.classList.add('invalid');
+        input.focus();
+        input.select();
+    }
+
+    function clearIdError() {
+        document.getElementById('participantId').classList.remove('invalid');
+        document.getElementById('participantIdError').textContent = '';
+    }
+
+    // Clear the error as soon as the participant edits the field, so they
+    // get immediate feedback that their correction was registered.
+    document.getElementById('participantId').addEventListener('input', clearIdError);
+
     document.getElementById('setupContinue').addEventListener('click', () => {
-        const enteredId = document.getElementById('participantId').value.trim();
+        const rawInput = document.getElementById('participantId').value;
+        const enteredId = rawInput.trim().toUpperCase();
+
         if (!enteredId) {
-            alert('Please enter a participant ID before continuing.');
-            document.getElementById('participantId').focus();
+            showIdError('Please enter the participant ID provided by the researcher.');
             return;
         }
+
+        if (!PARTICIPANT_ID_PATTERN.test(enteredId)) {
+            showIdError(
+                'Participant ID must be in the form P followed by digits ' +
+                '(e.g. P01, P15). Please check with the researcher if unsure.'
+            );
+            return;
+        }
+
+        // Write back the cleaned-up form so the input matches what we store.
+        // (Useful for the participant to see their ID was accepted as e.g.
+        // "P01" even if they typed " p01 ".)
+        document.getElementById('participantId').value = enteredId;
+        clearIdError();
+
         state.participantId = enteredId;
         state.demographics = gatherDemographics();
         state.environment = captureEnvironment();

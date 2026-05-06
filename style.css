@@ -169,6 +169,19 @@ ul {
     line-height: 1.7;
 }
 
+/* ----- Inline form error messages ------------------------------------- */
+.field-error {
+    color: #b00020;
+    font-size: 14px;
+    margin: 6px 0 0 0;
+    min-height: 1.2em;     /* reserves space so the layout doesn't shift
+                              when an error appears */
+}
+
+.form-group input.invalid {
+    border-color: #b00020;
+}
+
 /* ----- Download confirmation feedback --------------------------------- */
 .download-status {
     margin-top: 15px;
