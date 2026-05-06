@@ -26,7 +26,9 @@ const TEST_DURATION = 5 * 60;      // 5 minutes per measured task (seconds)
 const PRACTICE_DURATION = 60;       // 1 minute practice (seconds, not logged)
 const PAUSE_THRESHOLD_MS = 2000;    // Gap counted as a "pause"
 const INTERMISSION_MIN_SECONDS = 60; // Minimum enforced rest between tasks
-const EXPORT_VERSION = 2;           // Bumped from 1 because schema changed materially
+const EXPORT_VERSION = 3;           // v3: timer starts only on productive keys;
+                                    //     Ctrl/Cmd/Alt+Backspace tracked correctly;
+                                    //     consent timestamp reflects actual click time
 
 
 // -----------------------------------
@@ -94,6 +96,7 @@ const state = {
     sessionId: null,
     participantId: null,
     consented: false,
+    consentedAt: null,          // Real time the consent button was clicked
     demographics: null,
     environment: null,
     sessionStartTime: null,
@@ -290,6 +293,43 @@ function calculateIKIStats(keystrokeLog) {
 
 
 // -----------------------------------
+// Key classification helpers
+// -----------------------------------
+
+// "Productive" keystrokes are the ones that actually produce or remove
+// text in the textarea. The timer is gated on a productive keystroke so
+// that pressing Shift, the Windows key, etc. before the first character
+// does not start the timer. (Bug 1 in the v2 schema: P01's data showed
+// Task 2 lost ~13 seconds because the Windows key was pressed before
+// any letter was typed.)
+//
+// Anything that produces visible text (single-character keys), removes
+// text (Backspace, Delete), or inserts a newline (Enter) counts as
+// productive. Modifier keys (Shift, Ctrl, Alt, Meta), navigation keys
+// (arrow keys, Home, End, etc.), and function keys do not.
+//
+// Note that for Backspace/Delete we accept ANY modifier combination -
+// Ctrl+Backspace deletes a word, Cmd+Backspace deletes a line on macOS,
+// etc. (Bug 2 in the v2 schema: such combinations were classified as
+// non-text-changing even when they actually modified the textarea.)
+function isProductiveKey(event) {
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+        return true;
+    }
+    if (event.key === 'Enter') {
+        return true;
+    }
+    // Any single-character key, but only if no command-style modifier
+    // is held (Ctrl+C should not count as productive even though "c"
+    // would). Shift IS allowed because Shift+letter is just a capital.
+    if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        return true;
+    }
+    return false;
+}
+
+
+// -----------------------------------
 // Task runner
 // -----------------------------------
 
@@ -347,8 +387,30 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
         function onKeydown(event) {
             if (typingInput.disabled) return;
 
+            // Bug 1 fix: only a productive keystroke starts the timer.
+            // Modifier keys, function keys, and navigation keys are still
+            // logged so the keystroke trace is complete, but they do not
+            // begin the measurement window.
             if (!timerStarted) {
-                startTimer();
+                if (isProductiveKey(event)) {
+                    startTimer();
+                } else {
+                    // Pre-timer keystroke: log it with elapsedTimeMs = null
+                    // so that downstream analysis can distinguish these
+                    // from in-task events. We do not push pause events
+                    // for gaps between pre-timer keystrokes either, since
+                    // there is no taskStartTime to anchor them to yet.
+                    keystrokeLog.push({
+                        key: event.key,
+                        code: event.code,
+                        timestamp: new Date(Date.now()).toISOString(),
+                        elapsedTimeMs: null,
+                        textAfterKey: typingInput.value,
+                        cursorPosition: typingInput.selectionStart,
+                        textChanged: false
+                    });
+                    return;
+                }
             }
 
             const keyTime = Date.now();
@@ -370,12 +432,21 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
 
             if (event.key === 'Backspace') rawBackspaceCount++;
 
+            // Bug 2 fix: Backspace and Delete are classed as text-changing
+            // regardless of any modifier held. Ctrl+Backspace, Cmd+Backspace
+            // and similar combinations all actually delete text, so they
+            // must go through the keydown -> input pipeline that captures
+            // the post-input textAfterKey state.
+            //
+            // Single-character keys still require no command-style modifier,
+            // because Ctrl+C / Cmd+V / etc. do NOT produce text in the
+            // textarea even though their .key value is a single character.
             const keyChangesText =
-                !event.ctrlKey && !event.metaKey && !event.altKey &&
-                (event.key.length === 1 ||
-                 event.key === 'Backspace' ||
-                 event.key === 'Delete' ||
-                 event.key === 'Enter');
+                event.key === 'Backspace' ||
+                event.key === 'Delete' ||
+                event.key === 'Enter' ||
+                (event.key.length === 1 &&
+                 !event.ctrlKey && !event.metaKey && !event.altKey);
 
             if (!keyChangesText) {
                 keystrokeLog.push({
@@ -557,7 +628,9 @@ function buildSessionExport() {
         },
         consent: {
             consented: state.consented,
-            consentedAt: new Date(state.sessionStartTime).toISOString()
+            consentedAt: state.consentedAt
+                ? new Date(state.consentedAt).toISOString()
+                : null
         },
         demographics: state.demographics,
         environment: state.environment,
@@ -685,6 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     consentContinue.addEventListener('click', () => {
         state.consented = true;
+        state.consentedAt = Date.now();   // Bug 3 fix: real click time
         showScreen('screen-setup');
     });
 
