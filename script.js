@@ -569,6 +569,12 @@ function prepareTaskIntro(idx) {
 
     titleEl.textContent = `Task ${idx + 1} of 2: ${taskType === 'copy' ? 'Copy typing' : 'Prompt typing'}`;
 
+    // Both branches give parallel guidance on correction behaviour, so
+    // a participant in either condition has the same explicit permission
+    // to correct (or not). Without this symmetry, a participant might
+    // implicitly infer that correction is less expected in the prompt
+    // task, which would confound any comparison of correction behaviour
+    // between the two conditions.
     if (taskType === 'copy') {
         descEl.textContent =
             'You will see a passage of text on the screen. Type it as accurately and as quickly ' +
@@ -577,8 +583,9 @@ function prepareTaskIntro(idx) {
     } else {
         descEl.textContent =
             'You will see a writing prompt. Type a free response in your own words for the full ' +
-            'five minutes. There are no right or wrong answers. Try to keep typing throughout - ' +
-            'if you finish one thought, start another.';
+            'five minutes, writing as accurately and as quickly as you can. There are no right ' +
+            'or wrong answers. You may correct mistakes if you wish, but you do not have to. ' +
+            'Try to keep typing throughout - if you finish one thought, start another.';
     }
 }
 
