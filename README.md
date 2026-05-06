@@ -40,6 +40,7 @@ a single combined JSON download.
 ├── style.css                   Stylesheet
 ├── README.md                   This file
 ├── experimenter_protocol.md    Session-running checklist
+├── validate.py                 Per-file JSON validator (run on each session)
 ├── analyse.py                  Post-study analysis pipeline (Python)
 └── requirements.txt            Python dependencies for analyse.py
 ```
@@ -87,7 +88,7 @@ this structure (showing nesting only):
 
 ```
 metadata
-    exportVersion           number   schema version (currently 2)
+    exportVersion           number   schema version (currently 3)
     sessionId               string
     participantId           string
     sessionStartTime        ISO 8601 string
@@ -180,6 +181,51 @@ ensure a roughly equal split of orderings.
 | **Pause count** | Gaps ≥ 2000 ms between keystrokes | Threshold is `PAUSE_THRESHOLD_MS` in `script.js`. |
 | **IKI mean / SD / quartiles** | Time between successive text-changing keystrokes | Excludes modifier keys, arrow keys, etc. |
 
+## Validating session files
+
+After each session, run the validator on the downloaded JSON file before
+adding it to the analysis dataset:
+
+```bash
+python validate.py path/to/P01_session-1234567890.json
+
+# or validate every file in a directory at once:
+python validate.py data/*.json
+
+# treat warnings as errors (exit nonzero on any warning):
+python validate.py --strict data/*.json
+```
+
+The validator checks structural completeness (all required fields present),
+counterbalancing consistency (the order in `metadata.taskOrder` matches the
+order tasks appear in the array), plausibility bounds (task duration near
+300 s, gross WPM in human range, IKI mean within plausible limits), and
+internal consistency (`finalText` length matches `totalCharactersTyped`,
+`pauseEvents` length matches `pauseCount`, etc.).
+
+The validator is aware of both the v2 and v3 schemas. v2 files (collected
+before the bug fixes described below) validate with informational notes
+about the known issues; v3 files should validate cleanly. Running it
+immediately after each session catches problems while the participant is
+still available for a re-run if needed.
+
+### Schema versions
+
+- **v3 (current)** — timer starts only on a productive keystroke
+  (letters, Backspace, Delete, Enter); modifier presses before the first
+  productive key are logged with `elapsedTimeMs: null` rather than starting
+  the measurement window. Modifier-Backspace combinations such as
+  Ctrl+Backspace are correctly captured as text-changing keystrokes.
+  `consent.consentedAt` records the actual time the consent button was
+  clicked rather than the session start time.
+- **v2** — readable but had three now-fixed bugs: timer started on
+  any keystroke including modifiers; Ctrl+Backspace deletions were silently
+  dropped from the log; consent timestamp was always equal to the session
+  start time. The validator flags these as informational notes for v2
+  files. v2 data should be treated with care: WPM may be slightly deflated
+  by pre-typing modifier presses, and `effectiveBackspaceCount` slightly
+  undercounts deletions.
+
 ## Analysing the data
 
 After collecting JSON files from all participants:
@@ -192,7 +238,10 @@ python -m pip install -r requirements.txt
 mkdir -p data
 cp <wherever>/P*.json data/
 
-# 3. run the analysis
+# 3. validate before analysing (recommended)
+python validate.py data/*.json
+
+# 4. run the analysis
 python analyse.py --data-dir ./data --output-dir ./analysis_output
 ```
 
