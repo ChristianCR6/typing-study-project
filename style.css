@@ -1,5 +1,5 @@
 /* ============================================================
-   Typing Study — stylesheet
+   Typing Study - stylesheet
    The aesthetic is intentionally clean and minimal: the app is a
    research instrument, not a marketing site, so visual noise
    is kept low to avoid biasing typing behaviour.
@@ -148,6 +148,19 @@ button:disabled {
     border-color: #2c5fb8;
 }
 
+/* ----- Inline form error messages ------------------------------------- */
+.field-error {
+    color: #b00020;
+    font-size: 14px;
+    margin: 6px 0 0 0;
+    min-height: 1.2em;     /* reserves space so the layout doesn't shift
+                              when an error appears */
+}
+
+.form-group input.invalid {
+    border-color: #b00020;
+}
+
 /* ----- Consent ---------------------------------------------------------- */
 .consent-line {
     display: block;
@@ -167,19 +180,6 @@ button:disabled {
 
 ul {
     line-height: 1.7;
-}
-
-/* ----- Inline form error messages ------------------------------------- */
-.field-error {
-    color: #b00020;
-    font-size: 14px;
-    margin: 6px 0 0 0;
-    min-height: 1.2em;     /* reserves space so the layout doesn't shift
-                              when an error appears */
-}
-
-.form-group input.invalid {
-    border-color: #b00020;
 }
 
 /* ----- Download confirmation feedback --------------------------------- */

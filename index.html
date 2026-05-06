@@ -14,8 +14,6 @@
 
     <!-- ============================================================
          SCREEN: WELCOME
-         First thing the participant sees. Sets expectations about
-         length and structure of the session.
          ============================================================ -->
     <section id="screen-welcome" class="screen active">
         <h2>Welcome</h2>
@@ -34,8 +32,6 @@
 
     <!-- ============================================================
          SCREEN: CONSENT
-         Information sheet + consent checkbox.
-         Continue button is disabled until the box is ticked.
          ============================================================ -->
     <section id="screen-consent" class="screen">
         <h2>Information &amp; consent</h2>
@@ -71,9 +67,7 @@
 
     <!-- ============================================================
          SCREEN: SETUP
-         Participant ID (required) plus optional demographics.
-         All demographic fields default to "prefer not to say" so a
-         participant who skips them still produces valid data.
+         Participant ID format-validated; demographics optional.
          ============================================================ -->
     <section id="screen-setup" class="screen">
         <h2>Participant information</h2>
@@ -147,16 +141,33 @@
 
     <!-- ============================================================
          SCREEN: PRACTICE INTRO
-         Brief explanation before the unrecorded warm-up.
+         Now describes neutral interface practice (no source text).
+         The change removes the unfair head-start that copy-typing
+         practice would give the copy condition; both task types
+         get equal interface familiarisation.
          ============================================================ -->
     <section id="screen-practice-intro" class="screen">
         <h2>Practice round (1 minute)</h2>
         <p>Before the recorded tasks you will do a brief one-minute practice round
-            to get used to the interface. This is a copy-typing warm-up and is
-            <strong>not recorded</strong>.</p>
-        <p>The timer starts as soon as you press the first key.
-            Pasting and dragging text into the box are disabled.</p>
+            to get used to the interface. This is just a chance to familiarise yourself
+            with the typing area, the timer, and the layout of the page.
+            <strong>Nothing you type during practice is recorded or analysed.</strong></p>
+        <p>Once you press your first key the timer will begin counting down from one minute.
+            You can type whatever you like &mdash; random words, sentences, or anything at all &mdash;
+            until the timer runs out. Pasting and dragging text into the box are disabled.</p>
         <button id="practiceStart">Begin practice</button>
+    </section>
+
+    <!-- ============================================================
+         SCREEN: PRACTICE END
+         Intermediate confirmation screen between practice and task 1.
+         Removes the previously abrupt auto-jump.
+         ============================================================ -->
+    <section id="screen-practice-end" class="screen">
+        <h2>Practice complete</h2>
+        <p>That is the end of the practice round. When you are ready to begin
+            the first of the two measured tasks, click below.</p>
+        <button id="practiceEndContinue">Continue to task 1</button>
     </section>
 
     <!-- ============================================================
@@ -173,8 +184,8 @@
 
     <!-- ============================================================
          SCREEN: TYPING
-         The active typing surface. Reused for the practice and both
-         measured tasks - JS rebinds listeners and resets state each time.
+         Active typing surface. Reused for practice and both measured
+         tasks - JS rebinds listeners and resets state each time.
          ============================================================ -->
     <section id="screen-typing" class="screen">
         <div class="task">
@@ -198,7 +209,8 @@
 
     <!-- ============================================================
          SCREEN: INTERMISSION
-         Short break between Task 1 and Task 2.
+         Short break between Task 1 and Task 2. (Already serves as
+         the post-task-1 confirmation - has its own framing.)
          ============================================================ -->
     <section id="screen-intermission" class="screen">
         <h2>Task 1 complete</h2>

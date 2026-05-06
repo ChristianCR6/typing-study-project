@@ -8,7 +8,8 @@
 //
 // Flow:
 //   welcome -> consent -> setup (ID + demographics)
-//   -> practice (1 min, not recorded)
+//   -> practice intro -> practice (1 min, neutral free typing)
+//   -> practice end (continue button)
 //   -> task 1 intro -> task 1 (5 min)
 //   -> intermission
 //   -> task 2 intro -> task 2 (5 min)
@@ -55,23 +56,27 @@ const PROMPT_TEXT =
     "who was with you, what happened, and what made it stand out. If you finish describing one " +
     "experience, please continue with another. Keep writing for the full duration of the test.";
 
-// Practice content - a short copy passage. Practice is always copy-typing
-// because the goal is interface familiarisation, not task-specific practice
-// (which would unfairly advantage one of the real tasks).
-const PRACTICE_COPY_TEXT =
-    "The sun rose slowly over the quiet hills, casting long shadows across the valley below. " +
-    "A few birds began to call from the trees, and a soft breeze stirred the leaves. " +
-    "The morning air carried the smell of damp grass and distant smoke from a wood fire.";
+// Practice instruction text. Shown in the same place that the source-text /
+// prompt would normally appear, so the participant has something to look at
+// during practice.
+//
+// The practice round is now neutral interface familiarisation (free typing)
+// rather than copy-typing practice. This change removes a methodological
+// asymmetry: copy-only practice would have given the copy condition an
+// unfair head start, since participants would have had ~60 seconds of
+// "what it feels like to type with reference text on screen" before the
+// copy task but no equivalent preview before the prompt task.
+const PRACTICE_INSTRUCTIONS =
+    "Type anything you like for one minute. There is no specific text to copy " +
+    "and nothing you type here is recorded. The point is just to get used to " +
+    "the typing area and the timer before the measured tasks begin. " +
+    "The timer starts when you press your first key.";
 
 
 // -----------------------------------
 // Application state
 // -----------------------------------
-//
-// Single object holding all session-level data. Per-task data lives inside
-// state.completedTasks (one entry per finished task). This is built up as
-// the participant moves through the screens and is exported at the end.
-//
+
 const state = {
     sessionId: null,
     participantId: null,
@@ -101,13 +106,8 @@ function showScreen(screenId) {
 // -----------------------------------
 
 // Determine task order from participant ID. Odd-numbered participants do
-// copy first, even-numbered do prompt first. This is a deterministic rule
-// so the order can be reconstructed from the ID alone if needed.
-//
-// Why this matters: if every participant did copy first, any difference
-// between the tasks could be attributed to fatigue, learning, or screen
-// familiarity rather than to the task type itself. Counterbalancing
-// distributes those order effects evenly across both conditions.
+// copy first, even-numbered do prompt first. Deterministic so the order
+// can be reconstructed from the ID alone if needed.
 function determineTaskOrder(participantId) {
     const match = participantId.match(/(\d+)/);
     const number = match ? parseInt(match[1], 10) : 0;
@@ -118,12 +118,7 @@ function determineTaskOrder(participantId) {
 // -----------------------------------
 // Environment metadata
 // -----------------------------------
-//
-// Captures browser / device characteristics for the threats-to-validity
-// section of the report. The initial plan flags cross-device variability
-// as a known risk; logging this lets you say "all participants used X"
-// rather than hand-waving.
-//
+
 function captureEnvironment() {
     return {
         userAgent: navigator.userAgent,
@@ -162,9 +157,6 @@ function downloadJSON(data, filename) {
 // Metric calculation
 // -----------------------------------
 
-// Levenshtein edit distance using a rolling-row dynamic programming table.
-// O(m*n) time, O(min(m,n)) memory. For two ~1500-character strings this
-// runs in well under a second in any modern browser.
 function levenshtein(a, b) {
     const m = a.length;
     const n = b.length;
@@ -180,35 +172,23 @@ function levenshtein(a, b) {
         for (let j = 1; j <= n; j++) {
             const cost = a[i - 1] === b[j - 1] ? 0 : 1;
             curr[j] = Math.min(
-                prev[j] + 1,        // deletion
-                curr[j - 1] + 1,    // insertion
-                prev[j - 1] + cost  // substitution
+                prev[j] + 1,
+                curr[j - 1] + 1,
+                prev[j - 1] + cost
             );
         }
-        // swap rows: previous row becomes current, current is reused as next
         [prev, curr] = [curr, prev];
     }
 
     return prev[n];
 }
 
-// Gross WPM: standard typing-test formula treating 5 characters as one word.
-// Includes everything the participant typed, errors included.
 function calculateGrossWPM(finalText, elapsedTimeMs) {
     const minutes = elapsedTimeMs / 60000;
     if (minutes <= 0) return 0;
     return Number(((finalText.length / 5) / minutes).toFixed(2));
 }
 
-// Net WPM = Gross WPM minus errors per minute.
-// "Errors" here are uncorrected errors in the final text, measured as the
-// edit distance to the target. Net WPM penalises sloppiness, so a typist
-// who races and makes mistakes scores lower than one who is slower but
-// accurate. This is the standard typing-research metric (see
-// Soukoreff & MacKenzie, 2003).
-//
-// Only meaningful for the copy task - prompt typing has no reference text
-// against which to count uncorrected errors.
 function calculateNetWPM(grossWPM, uncorrectedErrors, elapsedTimeMs) {
     const minutes = elapsedTimeMs / 60000;
     if (minutes <= 0) return 0;
@@ -216,23 +196,6 @@ function calculateNetWPM(grossWPM, uncorrectedErrors, elapsedTimeMs) {
     return Math.max(0, Number((grossWPM - errorsPerMinute).toFixed(2)));
 }
 
-// Copy task accuracy using Levenshtein edit distance.
-//
-// Compares the typed text to the prefix of the target with the same length,
-// then computes accuracy as 1 - (editDistance / typedLength).
-//
-// Why prefix-of-target rather than full target: most participants will not
-// finish the 1300-word passage in 5 minutes. Comparing to the full target
-// would inflate the error count with all the characters they simply didn't
-// reach. Comparing to a same-length prefix asks the right question:
-// "of the characters you typed, how many were correct?"
-//
-// Why edit distance rather than char-by-char: if a participant inserts or
-// deletes a character early in the text, naive char-by-char comparison
-// marks every subsequent character wrong because everything is shifted
-// by one position. Edit distance finds the minimum number of corrections
-// (insertions, deletions, substitutions) needed and so handles misalignment
-// correctly. The diary entry on 5 April flagged this as a known issue.
 function calculateCopyTaskAccuracy(finalText, targetText) {
     const typedLen = finalText.length;
     if (typedLen === 0) {
@@ -257,8 +220,6 @@ function calculateCopyTaskAccuracy(finalText, targetText) {
     };
 }
 
-// Pause statistics over events that exceeded PAUSE_THRESHOLD_MS.
-// Same calculation as the previous version, kept here for completeness.
 function calculatePauseStats(pauseEvents) {
     if (pauseEvents.length === 0) {
         return { pauseCount: 0, averagePauseMs: 0, longestPauseMs: 0 };
@@ -271,19 +232,6 @@ function calculatePauseStats(pauseEvents) {
     };
 }
 
-// Inter-keystroke interval (IKI) statistics.
-//
-// IKI is the time between two successive text-changing keystrokes. It is
-// a much finer-grained measure of typing rhythm than WPM. Typing under
-// cognitive load (such as the prompt task) tends to produce a wider,
-// more variable IKI distribution: occasional long thinking gaps mixed
-// with bursts of fast typing, even when the mean WPM looks similar.
-//
-// Reporting mean, median, std dev, and the inter-quartile range gives
-// you a much richer picture of typing behaviour for the report.
-//
-// We exclude non-text-changing keystrokes (Shift on its own, arrow keys,
-// etc.) because we want intervals between *productive* keystrokes.
 function calculateIKIStats(keystrokeLog) {
     const textKeys = keystrokeLog.filter(k => k.textChanged);
     if (textKeys.length < 2) {
@@ -331,29 +279,7 @@ function calculateIKIStats(keystrokeLog) {
 // -----------------------------------
 // Task runner
 // -----------------------------------
-//
-// Runs a single typing session and resolves with collected data (or null
-// for practice). Used identically for practice, task 1, and task 2.
-//
-// Behaviour worth knowing about:
-//   - The timer starts on the FIRST KEYSTROKE rather than on screen entry.
-//     This is what the project diary asked for: a participant who needs a
-//     few seconds to read the prompt should not be penalised in their WPM.
-//
-//   - Listeners (keydown, input, paste, cut, drop) are attached when the
-//     task begins and removed when it finishes. This keeps each task's
-//     event handling isolated - no leftover listeners from the previous
-//     task interfering with the next.
-//
-//   - The keydown -> input pairing for text-changing keys is preserved
-//     from the original code. It is the right pattern because the input
-//     event fires after the textarea has updated, which is when the new
-//     text state is actually correct.
-//
-//   - A trailing pause is captured if the test ends mid-pause (i.e. the
-//     participant stops typing for the last few seconds). Same edge-case
-//     handling as the original implementation.
-//
+
 function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, taskNumber }) {
     return new Promise(resolve => {
         const typingInput = document.getElementById('typingInput');
@@ -371,9 +297,6 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
         typingInput.disabled = false;
         typingInput.focus();
 
-        // Per-task local state. Kept in closure rather than in the global
-        // state object so multiple tasks cannot accidentally pollute each
-        // other's logs or counters.
         let timeRemaining = durationSeconds;
         let timerInterval = null;
         let taskStartTime = null;
@@ -411,7 +334,6 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
         function onKeydown(event) {
             if (typingInput.disabled) return;
 
-            // First keystroke kicks the timer off
             if (!timerStarted) {
                 startTimer();
             }
@@ -421,7 +343,6 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
             const selectionStartBefore = typingInput.selectionStart;
             const selectionEndBefore = typingInput.selectionEnd;
 
-            // Pause detection: any gap >= threshold between keystrokes
             if (lastKeystrokeTime !== null) {
                 const gapMs = keyTime - lastKeystrokeTime;
                 if (gapMs >= PAUSE_THRESHOLD_MS) {
@@ -436,9 +357,6 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
 
             if (event.key === 'Backspace') rawBackspaceCount++;
 
-            // Decide whether this key will produce an input event we need
-            // to wait for. If yes, defer logging to the input handler so
-            // the logged textAfterKey is the actual post-input state.
             const keyChangesText =
                 !event.ctrlKey && !event.metaKey && !event.altKey &&
                 (event.key.length === 1 ||
@@ -447,7 +365,6 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
                  event.key === 'Enter');
 
             if (!keyChangesText) {
-                // Modifier / navigation keys logged immediately
                 keystrokeLog.push({
                     key: event.key,
                     code: event.code,
@@ -478,8 +395,6 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
                 textBeforeKey, selectionStartBefore, selectionEndBefore
             } = pendingTextChangeLog;
 
-            // Effective backspace = backspace that actually deleted something.
-            // (A backspace at position 0 with no selection deletes nothing.)
             if (key === 'Backspace') {
                 const hadSelection = selectionStartBefore !== selectionEndBefore;
                 const textGotShorter = textAfterKey.length < textBeforeKey.length;
@@ -523,7 +438,6 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
             clearInterval(timerInterval);
             typingInput.disabled = true;
 
-            // Detach all listeners so they do not survive into the next task
             typingInput.removeEventListener('keydown', onKeydown);
             typingInput.removeEventListener('input', onInput);
             typingInput.removeEventListener('paste', onPaste);
@@ -534,8 +448,6 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
             const finalText = typingInput.value;
             const elapsedTimeMs = taskStartTime ? endTime - taskStartTime : 0;
 
-            // Trailing pause: if the participant stopped typing well before
-            // time ran out, count that final stretch as a pause.
             if (lastKeystrokeTime !== null && taskStartTime !== null) {
                 const finalPauseMs = endTime - lastKeystrokeTime;
                 if (finalPauseMs >= PAUSE_THRESHOLD_MS) {
@@ -548,13 +460,11 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
                 }
             }
 
-            // Practice: nothing else to compute, nothing exported
             if (isPractice) {
                 resolve(null);
                 return;
             }
 
-            // Build full task data
             const grossWPM = calculateGrossWPM(finalText, elapsedTimeMs);
             const pauseStats = calculatePauseStats(pauseEvents);
             const ikiStats = calculateIKIStats(keystrokeLog);
@@ -695,7 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showScreen('screen-setup');
     });
 
-// Setup -> practice intro
+    // Setup -> practice intro
     //
     // Participant ID must match the pattern P<digits> (e.g. P01, P15, P100).
     // The trailing digits are required because determineTaskOrder() uses
@@ -718,8 +628,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('participantIdError').textContent = '';
     }
 
-    // Clear the error as soon as the participant edits the field, so they
-    // get immediate feedback that their correction was registered.
     document.getElementById('participantId').addEventListener('input', clearIdError);
 
     document.getElementById('setupContinue').addEventListener('click', () => {
@@ -739,9 +647,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Write back the cleaned-up form so the input matches what we store.
-        // (Useful for the participant to see their ID was accepted as e.g.
-        // "P01" even if they typed " p01 ".)
         document.getElementById('participantId').value = enteredId;
         clearIdError();
 
@@ -754,16 +659,25 @@ document.addEventListener('DOMContentLoaded', () => {
         showScreen('screen-practice-intro');
     });
 
-    // Practice intro -> practice -> task 1 intro
+    // Practice intro -> practice -> practice end (NEW)
+    //
+    // Practice now uses neutral free-typing (no source text). After the
+    // timer ends we show an explicit "Practice complete" confirmation
+    // screen rather than auto-jumping into Task 1 intro.
     document.getElementById('practiceStart').addEventListener('click', async () => {
         showScreen('screen-typing');
         await runTypingTask({
-            taskType: 'copy',
-            taskContent: PRACTICE_COPY_TEXT,
+            taskType: 'practice',
+            taskContent: PRACTICE_INSTRUCTIONS,
             durationSeconds: PRACTICE_DURATION,
             isPractice: true,
             taskNumber: 0
         });
+        showScreen('screen-practice-end');
+    });
+
+    // Practice end -> task 1 intro (NEW)
+    document.getElementById('practiceEndContinue').addEventListener('click', () => {
         prepareTaskIntro(0);
         showScreen('screen-task-intro');
     });
