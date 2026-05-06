@@ -1,1 +1,18 @@
+# macOS
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Analysis outputs (regenerated from data + analyse.py)
+analysis_output/
+out/
+
+# Participant data — DO NOT commit
+data/
+*_session-*.json
