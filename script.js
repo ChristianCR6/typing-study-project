@@ -51,11 +51,23 @@ There is, finally, something to be said for the way old cities slow you down. In
 There are, of course, cities of every age and kind, and the contrast between old and new is far from being the only thing that gives a place its character. A city is shaped by its climate, by its location, by the people who have lived there over the centuries, and by countless small choices made by individuals and institutions. The longer you spend in any one place, the more you notice these other influences. The way the wind comes off the water in a coastal town, the way a river divides a city into two halves with quite different histories, the way a particular trade or industry has marked the street names and the architecture: all of these shape the experience of being there in ways that are hard to define but easy to feel. To pay attention to these things is to understand a place properly, rather than simply to pass through it. It takes time, and patience, and a willingness to be quiet long enough to let the place reveal itself.`;
 
 // Single prompt used by all participants for fair comparison.
-// Open-ended enough that nobody runs out of things to say in 5 minutes.
+//
+// Design rationale: this prompt was chosen to be (a) impersonal, so that
+// participants are not asked to disclose anything sensitive about their
+// own lives; (b) inexhaustible, so that nobody runs out of things to say
+// in five minutes; and (c) roughly equal in cognitive load across
+// participants, since the everyday tasks named here (making tea, etc.)
+// are universally familiar. An earlier draft asked participants to
+// "describe a memorable experience or place from your life", which was
+// rejected because it could elicit autobiographical or emotionally
+// sensitive content that the researcher cannot honestly promise will
+// remain unread (the typed text is necessarily present in the data file).
 const PROMPT_TEXT =
-    "Describe a memorable experience or place from your life. Try to include where you were, " +
-    "who was with you, what happened, and what made it stand out. If you finish describing one " +
-    "experience, please continue with another. Keep writing for the full duration of the test.";
+    "Imagine you are writing instructions for someone who has never made a cup of tea. " +
+    "Describe in as much detail as possible how to make a cup of tea, step by step. " +
+    "When you have finished, write similar step-by-step instructions for another simple " +
+    "everyday task you know well, such as making toast, tying shoelaces, or brushing " +
+    "your teeth. Keep going with new tasks until the time is up.";
 
 // Practice instruction text. Shown in the same place that the source-text /
 // prompt would normally appear, so the participant has something to look at
@@ -613,6 +625,13 @@ function prepareTaskIntro(idx) {
     // implicitly infer that correction is less expected in the prompt
     // task, which would confound any comparison of correction behaviour
     // between the two conditions.
+    //
+    // The prompt branch additionally includes honest data-handling language:
+    // we cannot promise the typed text will not be read (it is necessarily
+    // present in the exported data file), so we tell the participant clearly
+    // that the analysis focuses on typing behaviour rather than content.
+    // This honesty is preferable to a misleading reassurance and pairs with
+    // the impersonal prompt to keep any disclosure low-stakes.
     if (taskType === 'copy') {
         descEl.textContent =
             'You will see a passage of text on the screen. Type it as accurately and as quickly ' +
@@ -623,7 +642,10 @@ function prepareTaskIntro(idx) {
             'You will see a writing prompt. Type a free response in your own words for the full ' +
             'five minutes, writing as accurately and as quickly as you can. There are no right ' +
             'or wrong answers. You may correct mistakes if you wish, but you do not have to. ' +
-            'Try to keep typing throughout - if you finish one thought, start another.';
+            'Try to keep typing throughout - if you finish one thought, start another. ' +
+            'The text you type will be saved as part of the data file; the analysis focuses on ' +
+            'how you type rather than what you write, so please do not worry about your ' +
+            'wording, spelling, or grammar.';
     }
 }
 
