@@ -189,3 +189,10 @@ ul {
     font-weight: bold;
     min-height: 1.4em;
 }
+
+/* ----- Intermission countdown hint ----------------------------------- */
+.intermission-hint {
+    font-style: italic;
+    color: #555;
+    margin-top: 12px;
+}

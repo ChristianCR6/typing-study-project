@@ -25,6 +25,7 @@
 const TEST_DURATION = 5 * 60;      // 5 minutes per measured task (seconds)
 const PRACTICE_DURATION = 60;       // 1 minute practice (seconds, not logged)
 const PAUSE_THRESHOLD_MS = 2000;    // Gap counted as a "pause"
+const INTERMISSION_MIN_SECONDS = 60; // Minimum enforced rest between tasks
 const EXPORT_VERSION = 2;           // Bumped from 1 because schema changed materially
 
 
@@ -559,6 +560,43 @@ function buildSessionExport() {
 
 
 // -----------------------------------
+// Intermission countdown
+// -----------------------------------
+//
+// Enforces a minimum rest period between Task 1 and Task 2. The Continue
+// button starts disabled and becomes active only after INTERMISSION_MIN_SECONDS
+// have elapsed. After that the participant can take as long as they like
+// before continuing.
+//
+// Why: pure participant-chosen rest creates uncontrolled variability between
+// participants (some take 5s, some take 5 minutes), which is a confound
+// when comparing tasks. Pure fixed rest is rigid and feels coercive. The
+// minimum-with-extension hybrid sets a controlled lower bound while
+// preserving participant autonomy.
+
+function startIntermissionCountdown() {
+    const button = document.getElementById('intermissionContinue');
+    const hintEl = document.getElementById('intermissionHint');
+    let secondsRemaining = INTERMISSION_MIN_SECONDS;
+
+    button.disabled = true;
+    hintEl.textContent = `You may continue in ${secondsRemaining} seconds.`;
+
+    const interval = setInterval(() => {
+        secondsRemaining--;
+        if (secondsRemaining > 0) {
+            const noun = secondsRemaining === 1 ? 'second' : 'seconds';
+            hintEl.textContent = `You may continue in ${secondsRemaining} ${noun}.`;
+        } else {
+            clearInterval(interval);
+            button.disabled = false;
+            hintEl.textContent = 'You may continue when ready.';
+        }
+    }, 1000);
+}
+
+
+// -----------------------------------
 // Configure the task-intro screen
 // -----------------------------------
 
@@ -707,6 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (state.completedTasks.length === 1) {
             showScreen('screen-intermission');
+            startIntermissionCountdown();
         } else {
             state.sessionEndTime = Date.now();
             showScreen('screen-complete');

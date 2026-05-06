@@ -209,13 +209,18 @@
 
     <!-- ============================================================
          SCREEN: INTERMISSION
-         Short break between Task 1 and Task 2. (Already serves as
-         the post-task-1 confirmation - has its own framing.)
+         A minimum 60-second rest is enforced before the Continue
+         button becomes active. This controls the lower bound of
+         inter-task rest (preventing participants from rushing
+         straight through) while still respecting their autonomy
+         to take longer if they wish.
          ============================================================ -->
     <section id="screen-intermission" class="screen">
         <h2>Task 1 complete</h2>
-        <p>Take a moment to rest. When you are ready, click below to begin the second task.</p>
-        <button id="intermissionContinue">Continue to task 2</button>
+        <p>Take a moment to rest. A short minimum break helps separate the two tasks;
+            the button below will become active shortly.</p>
+        <p id="intermissionHint" class="intermission-hint">You may continue in 60 seconds.</p>
+        <button id="intermissionContinue" disabled>Continue to task 2</button>
     </section>
 
     <!-- ============================================================
