@@ -355,6 +355,12 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
         taskTextTyped.textContent = '';
         taskTextRemaining.textContent = taskContent;
 
+        // Reset the source-text container's scroll position. The previous
+        // task's auto-scroll may have left it scrolled down; we want the
+        // new task to start at the top of its passage.
+        const taskTextContainer = taskTextTyped.parentElement.parentElement;
+        taskTextContainer.scrollTop = 0;
+
         // Position-cursor updater. Splits taskContent at the current
         // typed length so that the proportion already typed renders in
         // the muted style. We use raw typed length rather than a
@@ -367,6 +373,51 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
             const len = Math.min(typingInput.value.length, taskContent.length);
             taskTextTyped.textContent = taskContent.substring(0, len);
             taskTextRemaining.textContent = taskContent.substring(len);
+
+            // After updating the text, scroll the source-text container
+            // so that the position cursor stays comfortably visible. See
+            // ensureCursorVisible() for the heuristic.
+            ensureCursorVisible();
+        }
+
+        // Auto-scroll heuristic for the source-text container.
+        //
+        // Goals:
+        //   1. The cursor (boundary between typed and remaining text)
+        //      should always be visible. If the participant has typed
+        //      past the bottom of the box, scroll down. If they have
+        //      backspaced above the visible area, scroll up.
+        //   2. The cursor should not jitter on every single keystroke.
+        //      Scrolling fires only when the cursor is outside a
+        //      "comfort zone" - the middle vertical region of the box.
+        //   3. When we do scroll, we put the cursor about a third of
+        //      the way down the visible area, giving the participant
+        //      reading-room ahead of where they are typing.
+        //
+        // The pixel position of the cursor is read from the `offsetTop`
+        // of the start of the "remaining" span. This is the y-coordinate
+        // of the boundary between styled and un-styled text, relative to
+        // its offset parent (the `.task` container is the offset parent
+        // because of the surrounding layout, so this works directly).
+        function ensureCursorVisible() {
+            if (taskType !== 'copy') return;
+            const container = taskTextTyped.parentElement.parentElement;
+            // ^ taskTextTyped -> <p id="taskText"> -> <div class="task">
+            // The .task div is the scrollable container.
+            const cursorY = taskTextRemaining.offsetTop;
+            const visibleTop = container.scrollTop;
+            const visibleBottom = visibleTop + container.clientHeight;
+
+            // Comfort zone: 25% from top, 75% from top of the visible area.
+            // If the cursor is inside this range, do nothing.
+            const comfortTop = visibleTop + container.clientHeight * 0.25;
+            const comfortBottom = visibleTop + container.clientHeight * 0.75;
+
+            if (cursorY < comfortTop || cursorY > comfortBottom) {
+                // Place the cursor about a third of the way down.
+                const targetTop = cursorY - container.clientHeight * 0.33;
+                container.scrollTop = Math.max(0, targetTop);
+            }
         }
         typingInput.value = '';
         typingInput.disabled = false;
@@ -524,9 +575,10 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
             });
             pendingTextChangeLog = null;
 
-            // Update the source-text position cursor (no-op for non-copy
-            // tasks). Done after the keystroke is logged so the log entry
-            // reflects the textarea state, not the cursor state.
+            // Update the source-text position cursor and auto-scroll
+            // (no-op for non-copy tasks). Done after the keystroke is
+            // logged so the log entry reflects the textarea state, not
+            // the cursor state.
             updatePositionCursor();
         }
 
