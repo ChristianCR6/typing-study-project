@@ -56,6 +56,15 @@ h3 {
        rather than pushing the textarea off-screen. */
     max-height: 240px;
     overflow-y: auto;
+    /* Establish a positioning context so that descendant offsetTop values
+       are measured relative to this container. Without this, the
+       auto-scroll heuristic in script.js (ensureCursorVisible) would
+       read the marker span's offsetTop relative to <body>, producing
+       wildly wrong scroll calculations and a misfired scroll on the
+       very first keystroke. position: relative with no offsets does
+       not change visual layout - it only affects what offsetParent
+       resolves to for descendants. */
+    position: relative;
 }
 
 #taskText {
