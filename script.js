@@ -338,6 +338,7 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
         const typingInput = document.getElementById('typingInput');
         const timerDisplay = document.getElementById('timer');
         const taskTextTyped = document.getElementById('taskText-typed');
+        const taskTextCursor = document.getElementById('taskText-cursor');
         const taskTextRemaining = document.getElementById('taskText-remaining');
         const headerEl = document.getElementById('typingTaskHeader');
         const hintEl = document.getElementById('timerHint');
@@ -394,19 +395,21 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
         //      the way down the visible area, giving the participant
         //      reading-room ahead of where they are typing.
         //
-        // The pixel position of the cursor is read from the `offsetTop`
-        // of the start of the "remaining" span. This is the y-coordinate
-        // of the boundary between styled and un-styled text, relative to
-        // its offset parent (the `.task` container is the offset parent
-        // because of the surrounding layout, so this works directly).
+        // Cursor position is measured from the `offsetTop` of a tiny
+        // zero-width marker span (#taskText-cursor) sitting between the
+        // typed and remaining spans. Reading offsetTop directly from
+        // either content span would be wrong: when an inline span wraps
+        // across multiple lines, its offsetTop is the top of its FIRST
+        // line, not where it visually begins on the page. With the marker
+        // in between, we always get the y-coordinate of the actual visual
+        // boundary, regardless of where line wrapping happens to fall.
         function ensureCursorVisible() {
             if (taskType !== 'copy') return;
             const container = taskTextTyped.parentElement.parentElement;
             // ^ taskTextTyped -> <p id="taskText"> -> <div class="task">
             // The .task div is the scrollable container.
-            const cursorY = taskTextRemaining.offsetTop;
+            const cursorY = taskTextCursor.offsetTop;
             const visibleTop = container.scrollTop;
-            const visibleBottom = visibleTop + container.clientHeight;
 
             // Comfort zone: 25% from top, 75% from top of the visible area.
             // If the cursor is inside this range, do nothing.
