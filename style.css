@@ -63,6 +63,24 @@ h3 {
     white-space: pre-wrap;
 }
 
+/* ----- Copy-task position cursor -------------------------------------
+   The source text is split into two spans so the portion the participant
+   has already typed renders in a slightly muted colour. The contrast is
+   intentionally subtle - enough to be visible at a glance but not so
+   strong that it reads as "this part is wrong" or distracts from reading.
+   Crucially, this does NOT colour-code correctness (no red for errors,
+   no green for correct): only position. Communicating correctness would
+   change participant correction behaviour and confound the error-rate
+   measurements. */
+#taskText-typed {
+    color: #888;
+    background-color: rgba(44, 95, 184, 0.06);
+}
+
+#taskText-remaining {
+    color: inherit;
+}
+
 /* ----- Timer ------------------------------------------------------------ */
 .timer-box {
     background: #eef4ff;

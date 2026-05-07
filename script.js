@@ -337,7 +337,8 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
     return new Promise(resolve => {
         const typingInput = document.getElementById('typingInput');
         const timerDisplay = document.getElementById('timer');
-        const taskText = document.getElementById('taskText');
+        const taskTextTyped = document.getElementById('taskText-typed');
+        const taskTextRemaining = document.getElementById('taskText-remaining');
         const headerEl = document.getElementById('typingTaskHeader');
         const hintEl = document.getElementById('timerHint');
 
@@ -345,7 +346,28 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
         headerEl.textContent = isPractice
             ? 'Practice'
             : `Task ${taskNumber} of 2 — ${taskType === 'copy' ? 'Copy typing' : 'Prompt typing'}`;
-        taskText.textContent = taskContent;
+
+        // Render the task content. For copy tasks we will incrementally
+        // move characters from `remaining` to `typed` as the participant
+        // types, producing a position cursor effect. For practice and
+        // prompt tasks the source text is shown statically in the
+        // `remaining` span; the `typed` span stays empty and invisible.
+        taskTextTyped.textContent = '';
+        taskTextRemaining.textContent = taskContent;
+
+        // Position-cursor updater. Splits taskContent at the current
+        // typed length so that the proportion already typed renders in
+        // the muted style. We use raw typed length rather than a
+        // prefix-match: the cursor reflects how far through the source
+        // the participant has progressed in volume terms, without
+        // implicitly flagging mistakes (which would change correction
+        // behaviour and confound the error-rate measurements).
+        function updatePositionCursor() {
+            if (taskType !== 'copy') return;
+            const len = Math.min(typingInput.value.length, taskContent.length);
+            taskTextTyped.textContent = taskContent.substring(0, len);
+            taskTextRemaining.textContent = taskContent.substring(len);
+        }
         typingInput.value = '';
         typingInput.disabled = false;
         typingInput.focus();
@@ -501,6 +523,11 @@ function runTypingTask({ taskType, taskContent, durationSeconds, isPractice, tas
                 textChanged: true
             });
             pendingTextChangeLog = null;
+
+            // Update the source-text position cursor (no-op for non-copy
+            // tasks). Done after the keystroke is logged so the log entry
+            // reflects the textarea state, not the cursor state.
+            updatePositionCursor();
         }
 
         function blockInput(event, action) {
