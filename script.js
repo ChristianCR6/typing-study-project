@@ -26,7 +26,19 @@ const TEST_DURATION = 5 * 60;      // 5 minutes per measured task (seconds)
 const PRACTICE_DURATION = 60;       // 1 minute practice (seconds, not logged)
 const PAUSE_THRESHOLD_MS = 2000;    // Gap counted as a "pause"
 const INTERMISSION_MIN_SECONDS = 60; // Minimum enforced rest between tasks
-const EXPORT_VERSION = 3;           // v3: timer starts only on productive keys;
+const EXPORT_VERSION = 4;           // v4: Net WPM formula corrected. Previous
+                                    //     code subtracted error CHARACTERS per
+                                    //     minute from Gross WPM (which is in
+                                    //     5-character WORDS per minute), mixing
+                                    //     units. The fix divides uncorrected
+                                    //     errors by 5 before converting to a
+                                    //     per-minute rate, matching the
+                                    //     Soukoreff & MacKenzie (2003)
+                                    //     definition: (|T| - INF) / S * 60 / 5.
+                                    //     v3 sessions remain readable but their
+                                    //     stored netWPM should be recomputed
+                                    //     from the raw fields during analysis.
+                                    // v3: timer starts only on productive keys;
                                     //     Ctrl/Cmd/Alt+Backspace tracked correctly;
                                     //     consent timestamp reflects actual click time
 
@@ -208,8 +220,18 @@ function calculateGrossWPM(finalText, elapsedTimeMs) {
 function calculateNetWPM(grossWPM, uncorrectedErrors, elapsedTimeMs) {
     const minutes = elapsedTimeMs / 60000;
     if (minutes <= 0) return 0;
-    const errorsPerMinute = uncorrectedErrors / minutes;
-    return Math.max(0, Number((grossWPM - errorsPerMinute).toFixed(2)));
+    // Net WPM = Gross WPM - error rate, where BOTH terms must be in the same
+    // units (words per minute). uncorrectedErrors is the Levenshtein edit
+    // distance, measured in characters, so it must be converted to words by
+    // dividing by 5 (the standard typing-research convention of 1 word = 5
+    // chars) before being expressed as a per-minute rate. Soukoreff &
+    // MacKenzie (2003) define the equivalent form as (|T| - INF) / S * 60 / 5.
+    //
+    // The previous version of this function omitted the /5 conversion, which
+    // produced spuriously low Net WPM values. See EXPORT_VERSION comment for
+    // the full version history.
+    const errorWordsPerMinute = (uncorrectedErrors / 5) / minutes;
+    return Math.max(0, Number((grossWPM - errorWordsPerMinute).toFixed(2)));
 }
 
 function calculateCopyTaskAccuracy(finalText, targetText) {
