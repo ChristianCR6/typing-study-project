@@ -42,8 +42,7 @@ from scipy import stats
 # Schema version this script was written against. Sessions exported by an
 # older version of the app will trigger a warning but the script will still
 # attempt to process them.
-EXPECTED_EXPORT_VERSION = 2
-
+EXPECTED_EXPORT_VERSION = 3
 
 # =========================================================================
 # Loading & validation
