@@ -39,10 +39,13 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 
-# Schema version this script was written against. Sessions exported by an
-# older version of the app will trigger a warning but the script will still
-# attempt to process them.
-EXPECTED_EXPORT_VERSION = 3
+# Schema version this script was written against. v4 is the current schema
+# (Net WPM formula corrected). v3 sessions are still accepted as input
+# because Net WPM is recomputed from raw fields by compute_net_wpm() -
+# the stored netWPM in v3 files used a unit-inconsistent formula and is
+# ignored.
+EXPECTED_EXPORT_VERSION = 4
+SUPPORTED_LEGACY_VERSIONS = {3}
 
 # =========================================================================
 # Loading & validation
@@ -57,9 +60,18 @@ def load_session(filepath):
         raise ValueError(f"missing required top-level fields")
 
     version = data['metadata'].get('exportVersion')
-    if version != EXPECTED_EXPORT_VERSION:
+    if version == EXPECTED_EXPORT_VERSION:
+        pass
+    elif version in SUPPORTED_LEGACY_VERSIONS:
+        # Legacy v3: the stored netWPM is unreliable but raw fields are
+        # intact, so analysis proceeds with recomputation. Quiet note
+        # rather than a warning - this is an expected, documented case.
+        print(f"  note: {filepath.name} is v{version} (legacy); "
+              f"Net WPM will be recomputed from raw fields")
+    else:
         print(f"  WARNING: {filepath.name} has exportVersion={version}, "
-              f"expected {EXPECTED_EXPORT_VERSION}")
+              f"expected {EXPECTED_EXPORT_VERSION} "
+              f"(or legacy {sorted(SUPPORTED_LEGACY_VERSIONS)})")
 
     if len(data['tasks']) != 2:
         raise ValueError(f"expected 2 tasks, found {len(data['tasks'])}")
@@ -70,6 +82,42 @@ def load_session(filepath):
                          f"got {task_types}")
 
     return data
+
+
+def compute_net_wpm(task):
+    """Compute Net WPM from raw task fields.
+
+    Uses the Soukoreff & MacKenzie (2003) definition:
+        Net WPM = (|T| - INF) / S * 60 / 5
+    where |T| is total characters typed, INF is uncorrected error
+    characters (Levenshtein edit distance against the same-length
+    target prefix), and S is task duration in seconds. The /5 converts
+    characters to "words" using the standard typing-research convention
+    of 1 word = 5 characters.
+
+    The stored `netWPM` field in v3 session files used a
+    unit-inconsistent formula (subtracted error chars/min from
+    words/min, omitting the /5 conversion) and is therefore unreliable.
+    This function recomputes from the raw fields, which are stored
+    correctly in all schema versions. v4 sessions contain the
+    corrected value pre-computed but are recomputed here anyway for
+    uniformity across the dataset.
+
+    Returns None for tasks without a reference text (i.e., the prompt
+    task), since uncorrected errors are undefined without a target.
+    """
+    if task['taskType'] != 'copy':
+        return None
+    cm = task['metrics'].get('copyTaskMetrics')
+    if not cm:
+        return None
+    chars = task['metrics']['totalCharactersTyped']
+    edit_distance = cm['editDistance']
+    minutes = task['durationSeconds'] / 60
+    if minutes <= 0:
+        return None
+    correct_chars = max(0, chars - edit_distance)
+    return round((correct_chars / 5) / minutes, 2)
 
 
 def extract_task_row(session, task):
@@ -94,11 +142,12 @@ def extract_task_row(session, task):
         'demographics_keyboardType': session.get('demographics', {})
                                              .get('keyboardType', 'NA'),
 
-        # Speed metrics
+        # Speed metrics. netWPM is recomputed from raw fields rather than
+        # taken from the stored value - see compute_net_wpm() for why.
         'durationSeconds': task['durationSeconds'],
         'totalCharacters': m['totalCharactersTyped'],
         'grossWPM': m['grossWPM'],
-        'netWPM': m.get('netWPM'),
+        'netWPM': compute_net_wpm(task),
 
         # Correction behaviour
         'rawBackspaces': m['rawBackspaceCount'],
@@ -436,6 +485,13 @@ def write_markdown_report(df, group, tests, order, output_dir):
                  f"variation across participants.\n")
     lines.append(f"- Net WPM is reported only for the copy task (no reference text "
                  f"exists for the prompt task).\n")
+    lines.append(f"- Net WPM values are recomputed from raw fields "
+                 f"(`totalCharactersTyped`, `copyTaskMetrics.editDistance`, "
+                 f"`durationSeconds`) using the Soukoreff & MacKenzie (2003) "
+                 f"formulation `(|T| - INF) / S * 60 / 5`. The stored `netWPM` "
+                 f"field in v3 session files used a unit-inconsistent formula "
+                 f"and is not used here. v4 sessions contain the corrected value "
+                 f"pre-computed but are recomputed for dataset uniformity.\n")
     lines.append(f"- Copy-task accuracy uses Levenshtein edit distance against the "
                  f"prefix of the target with the same length as the typed text "
                  f"(handles misalignment without penalising incompletion).\n")
