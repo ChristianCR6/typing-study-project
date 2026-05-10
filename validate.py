@@ -31,14 +31,21 @@ from pathlib import Path
 
 
 # Schema version this validator was written against.
-EXPECTED_EXPORT_VERSION = 3
+EXPECTED_EXPORT_VERSION = 4
 
-# Versions that are still readable but reflect the v2 schema, which had three
-# now-fixed bugs (timer started on modifier keys; Ctrl+Backspace deletions
-# were untracked; consent timestamp was set to session start). Files at
-# these versions can still be analysed, but their data must be interpreted
-# with care.
-SUPPORTED_LEGACY_VERSIONS = {2}
+# Versions that are still readable but predate the current schema. Files at
+# these versions can still be validated and analysed; the validator emits
+# informational notes rather than errors for known-and-fixed legacy issues.
+#   v3: stored netWPM uses a unit-inconsistent formula (subtracts error
+#       chars/min from words/min, omitting the /5 conversion). The raw
+#       fields needed to recompute Net WPM correctly are present, so
+#       analyse.py recomputes from those. The validator does not check the
+#       stored netWPM value directly, so v3 files validate cleanly.
+#   v2: timer started on any keystroke including modifiers; Ctrl+Backspace
+#       deletions were silently dropped from the log; consent timestamp was
+#       always equal to the session start time. v2 files trigger
+#       informational notes for each of these patterns.
+SUPPORTED_LEGACY_VERSIONS = {2, 3}
 
 # Plausibility bounds - data outside these triggers a warning, not an error.
 # Adjust if your study config changes (e.g. you alter TEST_DURATION).
@@ -124,12 +131,25 @@ def check_metadata(data, issues):
 
     if md.get('exportVersion') != EXPECTED_EXPORT_VERSION:
         version = md.get('exportVersion')
-        if version in SUPPORTED_LEGACY_VERSIONS:
+        if version == 2:
+            issues.note(f"exportVersion is 2 (current schema is "
+                        f"{EXPECTED_EXPORT_VERSION}); v2 had three fixed "
+                        f"bugs - timer-start, Ctrl+Backspace, and "
+                        f"consent-timestamp warnings below are expected "
+                        f"for this file")
+        elif version == 3:
+            issues.note(f"exportVersion is 3 (current schema is "
+                        f"{EXPECTED_EXPORT_VERSION}); v3 stored a "
+                        f"unit-inconsistent netWPM value, but the raw "
+                        f"fields needed to recompute it correctly are "
+                        f"present. analyse.py recomputes Net WPM from "
+                        f"those raw fields. No other warnings expected.")
+        elif version in SUPPORTED_LEGACY_VERSIONS:
+            # Defensive branch in case SUPPORTED_LEGACY_VERSIONS is
+            # extended without updating the cases above.
             issues.note(f"exportVersion is {version} (current schema is "
-                        f"{EXPECTED_EXPORT_VERSION}); file is from before "
-                        f"the v2-schema bug fixes - timer-start, "
-                        f"Ctrl+Backspace, and consent-timestamp warnings "
-                        f"below are expected for this file")
+                        f"{EXPECTED_EXPORT_VERSION}); legacy schema, see "
+                        f"validator source for known differences")
         else:
             issues.warn(f"exportVersion is {version}, "
                         f"expected {EXPECTED_EXPORT_VERSION}")

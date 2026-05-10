@@ -88,7 +88,7 @@ this structure (showing nesting only):
 
 ```
 metadata
-    exportVersion           number   schema version (currently 3)
+    exportVersion           number   schema version (currently 4)
     sessionId               string
     participantId           string
     sessionStartTime        ISO 8601 string
@@ -175,7 +175,7 @@ ensure a roughly equal split of orderings.
 | Metric | Computed from | Notes |
 |---|---|---|
 | **Gross WPM** | `(chars / 5) / minutes` | Standard typing-test formula. Includes errors. |
-| **Net WPM** | `Gross WPM − errorsPerMinute` | Errors = Levenshtein edit distance to target. Copy task only. |
+| **Net WPM** | `(chars − editDistance) / 5 / minutes` | Soukoreff & MacKenzie (2003) formulation `(\|T\| − INF) / S × 60 / 5`. Copy task only. Recomputed from raw fields in `analyse.py` for uniformity across schema versions. |
 | **Copy accuracy** | `(1 − editDistance / typedLength) × 100` | Compared against same-length prefix of target. Handles misalignment. |
 | **Effective backspace count** | Backspaces that actually deleted text | Filtered from `keydown` + post-`input` state comparison. |
 | **Pause count** | Gaps ≥ 2000 ms between keystrokes | Threshold is `PAUSE_THRESHOLD_MS` in `script.js`. |
@@ -203,21 +203,32 @@ order tasks appear in the array), plausibility bounds (task duration near
 internal consistency (`finalText` length matches `totalCharactersTyped`,
 `pauseEvents` length matches `pauseCount`, etc.).
 
-The validator is aware of both the v2 and v3 schemas. v2 files (collected
-before the bug fixes described below) validate with informational notes
-about the known issues; v3 files should validate cleanly. Running it
-immediately after each session catches problems while the participant is
-still available for a re-run if needed.
+The validator is aware of the v2, v3, and v4 schemas. v2 and v3 files
+(collected before various fixes described below) validate with
+informational notes about the known differences; v4 files should validate
+cleanly. Running it immediately after each session catches problems while
+the participant is still available for a re-run if needed.
 
 ### Schema versions
 
-- **v3 (current)** — timer starts only on a productive keystroke
+- **v4 (current)** — Net WPM formula corrected. Earlier versions stored
+  Net WPM using a unit-inconsistent formula (subtracting error
+  characters-per-minute from words-per-minute, omitting the conversion
+  factor of 5). v4 stores the corrected value computed as
+  `(|T| − INF) / S × 60 / 5` per Soukoreff & MacKenzie (2003). The data
+  capture itself is unchanged from v3. The 10-participant dataset for
+  this study was collected under v3; `analyse.py` recomputes Net WPM
+  from raw fields, so the corrected value is used in the analysis
+  regardless of which schema version a file was captured under.
+- **v3** — timer starts only on a productive keystroke
   (letters, Backspace, Delete, Enter); modifier presses before the first
   productive key are logged with `elapsedTimeMs: null` rather than starting
   the measurement window. Modifier-Backspace combinations such as
   Ctrl+Backspace are correctly captured as text-changing keystrokes.
   `consent.consentedAt` records the actual time the consent button was
-  clicked rather than the session start time.
+  clicked rather than the session start time. The stored `netWPM` field
+  used a unit-inconsistent formula (corrected in v4); the raw fields
+  needed to recompute Net WPM correctly are present and intact.
 - **v2** — readable but had three now-fixed bugs: timer started on
   any keystroke including modifiers; Ctrl+Backspace deletions were silently
   dropped from the log; consent timestamp was always equal to the session
